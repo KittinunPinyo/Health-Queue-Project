@@ -1,0 +1,12 @@
+/* นำไปใช้ครอบ Layout ของคุณเพื่อให้ Footer อยู่ล่างสุดเสมอ */
+
+.page-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh; /* ความสูงขั้นต่ำเท่ากับหน้าจอ */
+}
+
+.content-wrap {
+  flex: 1; /* ส่วนเนื้อหาจะขยายเต็มที่เพื่อดัน Footer ลงล่าง */
+  width: 100%;
+}

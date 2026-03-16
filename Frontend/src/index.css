@@ -1,0 +1,21 @@
+/* --- 🔹 โค้ดสำหรับจัดกลางหน้า Login 🔹 --- */
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;    /* 👈 จัดกลางแนวตั้ง */
+  justify-content: center; /* 👈 จัดกลางแนวนอน */
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.auth-link {
+  color: #1b8cf2; /* (ใช้สี primary จาก index.css ของคุณ) */
+  font-weight: 600;
+  text-decoration: none;
+  margin-left: 0.5rem;
+}
+/* --- (จบส่วนที่เพิ่ม) --- */
