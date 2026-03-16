@@ -8,6 +8,7 @@ function printUsage() {
   console.log('Usage:');
   console.log('  node src/user/user-admin-tools.js list-users');
   console.log('  node src/user/user-admin-tools.js reset-password <email> [newPassword]');
+  console.log('  node src/user/user-admin-tools.js promote-admin <email>');
 }
 
 if (!action) {
@@ -69,6 +70,30 @@ if (action === 'list-users') {
         console.log('Password updated for', email);
         closeAndExit(0);
       });
+    });
+  }
+} else if (action === 'promote-admin') {
+  const email = process.argv[3];
+
+  if (!email) {
+    console.error('Usage: node src/user/user-admin-tools.js promote-admin <email>');
+    closeAndExit(1);
+  } else {
+    db.run('UPDATE users SET role = ? WHERE email = ?', ['admin', email], function onUpdate(updateErr) {
+      if (updateErr) {
+        console.error('Update error', updateErr);
+        closeAndExit(1);
+        return;
+      }
+
+      if (this.changes === 0) {
+        console.error('No user found with email', email);
+        closeAndExit(1);
+        return;
+      }
+
+      console.log('User promoted to admin for', email);
+      closeAndExit(0);
     });
   }
 } else {
