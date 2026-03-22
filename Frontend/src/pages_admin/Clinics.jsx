@@ -153,9 +153,30 @@ function Clinics() {
     useEffect(() => {
         const loadClinics = async () => {
             try {
-                const response = await axios.get('/api/hospitals');
-                const hospitals = response.data.hospitals || [];
+                const [hospitalsRes, doctorsRes] = await Promise.all([
+                    axios.get('/api/hospitals'),
+                    axios.get('/api/doctors'),
+                ]);
+                const hospitals = hospitalsRes.data.hospitals || [];
+                const doctors = doctorsRes.data.doctors || [];
                 const localClinics = JSON.parse(localStorage.getItem('clinicsData')) || [];
+
+                const doctorsByHospital = doctors.reduce((acc, doctor) => {
+                    const key = String(doctor.hospitalId || '');
+                    if (!key) return acc;
+                    if (!acc[key]) acc[key] = [];
+                    acc[key].push({
+                        id: doctor.id,
+                        name: doctor.name || '',
+                        specialty: doctor.specialty || '',
+                        email: doctor.email || '',
+                        phone: doctor.phone || '',
+                        licenseNumber: doctor.licenseNumber || '',
+                        experienceYears: doctor.experienceYears || 0,
+                        image: doctor.image || '',
+                    });
+                    return acc;
+                }, {});
 
                 const mergedClinics = hospitals.map((hospital) => {
                     const local = localClinics.find((c) => String(c.id) === String(hospital.id)) || {};
@@ -168,7 +189,7 @@ function Clinics() {
                         website: hospital.website || '',
                         logo: hospital.logo || hospital.image || '',
                         image: hospital.image || hospital.logo || local.image || hospital.logo || 'https://placehold.co/600x400/eeeeee/888888?text=No+Image',
-                        doctors: local.doctors || [],
+                        doctors: doctorsByHospital[String(hospital.id)] || local.doctors || [],
                     };
                 });
 
@@ -367,50 +388,79 @@ function Clinics() {
         setAddDoctorImagePreview('');
     };
 
-    const handleAddDoctor = (e) => {
+    const handleAddDoctor = async (e) => {
         e.preventDefault();
         if (!selectedClinic) return;
 
-        const newDoctor = {
-            id: Date.now(), name: addDoctorName,
-            specialty: addDoctorSpecialty || "ไม่มีแผนก",
-            email: addDoctorEmail, 
-            image: addDoctorImage,
-            packages: []
-        };
-        const updatedData = clinicsData.map(c => {
-            if (c.id === selectedClinic.id) {
-                return { ...c, doctors: [...c.doctors, newDoctor] };
-            }
-            return c;
-        });
-        saveClinicsData(updatedData);
-        
-        // 🔹 แจ้งเตือนคนไข้ทุกคน 🔹
-        broadcastSystemNotification(`👨‍⚕️ แพทย์ท่านใหม่! ${newDoctor.name} (${newDoctor.specialty}) ประจำ${selectedClinic.name} พร้อมให้บริการ`);
+        try {
+            const response = await axios.post('/api/doctors', {
+                name: addDoctorName,
+                specialty: addDoctorSpecialty || 'ไม่มีแผนก',
+                email: addDoctorEmail,
+                phone: '',
+                licenseNumber: '',
+                experienceYears: 0,
+                image: addDoctorImage,
+                hospitalId: selectedClinic.id,
+                hospital: selectedClinic.name,
+            });
 
-        setAddDoctorName('');
-        setAddDoctorSpecialty('');
-        setAddDoctorEmail('');
-        setAddDoctorImage('');
-        setAddDoctorImagePreview('');
-        alert('เพิ่มแพทย์ใหม่ และแจ้งเตือนคนไข้เรียบร้อยแล้ว');
-    };
+            const createdDoctor = response.data.doctor;
+            const newDoctor = {
+                id: createdDoctor.id,
+                name: createdDoctor.name,
+                specialty: createdDoctor.specialty || 'ไม่มีแผนก',
+                email: createdDoctor.email || '',
+                phone: createdDoctor.phone || '',
+                licenseNumber: createdDoctor.licenseNumber || '',
+                experienceYears: createdDoctor.experienceYears || 0,
+                image: createdDoctor.image || '',
+                packages: [],
+            };
 
-    const handleDeleteDoctor = (doctorId) => {
-        if (!selectedClinic) return;
-        const doctor = selectedClinic.doctors.find(d => d.id === doctorId);
-        if (!doctor) return;
-        if (window.confirm(`คุณต้องการลบแพทย์ "${doctor.name}" ใช่หรือไม่?`)) {
-            const updatedDoctors = selectedClinic.doctors.filter(d => d.id !== doctorId);
             const updatedData = clinicsData.map(c => {
                 if (c.id === selectedClinic.id) {
-                    return { ...c, doctors: updatedDoctors };
+                    return { ...c, doctors: [...c.doctors, newDoctor] };
                 }
                 return c;
             });
             saveClinicsData(updatedData);
-            alert('ลบแพทย์เรียบร้อยแล้ว');
+
+            // 🔹 แจ้งเตือนคนไข้ทุกคน 🔹
+            broadcastSystemNotification(`👨‍⚕️ แพทย์ท่านใหม่! ${newDoctor.name} (${newDoctor.specialty}) ประจำ${selectedClinic.name} พร้อมให้บริการ`);
+
+            setAddDoctorName('');
+            setAddDoctorSpecialty('');
+            setAddDoctorEmail('');
+            setAddDoctorImage('');
+            setAddDoctorImagePreview('');
+            alert('เพิ่มแพทย์ใหม่ และแจ้งเตือนคนไข้เรียบร้อยแล้ว');
+        } catch (error) {
+            console.error('Add doctor error:', error);
+            alert('ไม่สามารถเพิ่มแพทย์ได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง');
+        }
+    };
+
+    const handleDeleteDoctor = async (doctorId) => {
+        if (!selectedClinic) return;
+        const doctor = selectedClinic.doctors.find(d => d.id === doctorId);
+        if (!doctor) return;
+        if (window.confirm(`คุณต้องการลบแพทย์ "${doctor.name}" ใช่หรือไม่?`)) {
+            try {
+                await axios.delete(`/api/doctors/${doctorId}`);
+                const updatedDoctors = selectedClinic.doctors.filter(d => d.id !== doctorId);
+                const updatedData = clinicsData.map(c => {
+                    if (c.id === selectedClinic.id) {
+                        return { ...c, doctors: updatedDoctors };
+                    }
+                    return c;
+                });
+                saveClinicsData(updatedData);
+                alert('ลบแพทย์เรียบร้อยแล้ว');
+            } catch (error) {
+                console.error('Delete doctor error:', error);
+                alert('ไม่สามารถลบแพทย์ได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง');
+            }
         }
     };
     
@@ -429,22 +479,44 @@ function Clinics() {
         setCurrentEditingDoctor(null);
     };
 
-    const handleSaveDoctorEdit = (doctorId, updatedDoctorData) => {
+    const handleSaveDoctorEdit = async (doctorId, updatedDoctorData) => {
         if (!selectedClinic) return;
-        const updatedDoctors = selectedClinic.doctors.map(d => {
-            if (d.id === doctorId) {
-                return { ...d, ...updatedDoctorData };
-            }
-            return d;
-        });
-        const updatedClinicsData = clinicsData.map(c => {
-             if (c.id === selectedClinic.id) {
-                return { ...c, doctors: updatedDoctors };
-            }
-            return c;
-        });
-        saveClinicsData(updatedClinicsData);
-        alert('แก้ไขข้อมูลแพทย์เรียบร้อยแล้ว');
+        try {
+            const response = await axios.put(`/api/doctors/${doctorId}`, {
+                name: updatedDoctorData.name,
+                specialty: updatedDoctorData.specialty,
+                email: updatedDoctorData.email,
+                image: updatedDoctorData.image,
+                hospitalId: selectedClinic.id,
+                hospital: selectedClinic.name,
+            });
+
+            const updatedDoctor = response.data.doctor;
+            const updatedDoctors = selectedClinic.doctors.map(d => {
+                if (d.id === doctorId) {
+                    return {
+                        ...d,
+                        ...updatedDoctorData,
+                        name: updatedDoctor.name,
+                        specialty: updatedDoctor.specialty || d.specialty,
+                        email: updatedDoctor.email || '',
+                        image: updatedDoctor.image || '',
+                    };
+                }
+                return d;
+            });
+            const updatedClinicsData = clinicsData.map(c => {
+                 if (c.id === selectedClinic.id) {
+                    return { ...c, doctors: updatedDoctors };
+                }
+                return c;
+            });
+            saveClinicsData(updatedClinicsData);
+            alert('แก้ไขข้อมูลแพทย์เรียบร้อยแล้ว');
+        } catch (error) {
+            console.error('Edit doctor error:', error);
+            alert('ไม่สามารถแก้ไขข้อมูลแพทย์ได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง');
+        }
     };
 
     // --- Render Functions ---

@@ -219,9 +219,27 @@ function Home() {
             setCurrentUser(user || { name: t('defaultUserName') });
 
             try {
-                const response = await axios.get('/api/hospitals');
-                const hospitals = response.data.hospitals || [];
+                const [hospitalsRes, doctorsRes] = await Promise.all([
+                    axios.get('/api/hospitals'),
+                    axios.get('/api/doctors'),
+                ]);
+                const hospitals = hospitalsRes.data.hospitals || [];
+                const doctors = doctorsRes.data.doctors || [];
                 const storedLocal = JSON.parse(localStorage.getItem('clinicsData')) || [];
+
+                const doctorsByHospital = doctors.reduce((acc, doctor) => {
+                    const key = String(doctor.hospitalId || '');
+                    if (!key) return acc;
+                    if (!acc[key]) acc[key] = [];
+                    acc[key].push({
+                        id: doctor.id,
+                        name: doctor.name || '',
+                        specialty: doctor.specialty || '',
+                        email: doctor.email || '',
+                        image: doctor.image || '',
+                    });
+                    return acc;
+                }, {});
 
                 const combined = hospitals.map((h) => {
                     const local = storedLocal.find((c) => String(c.id) === String(h.id)) || {};
@@ -229,7 +247,7 @@ function Home() {
                         id: h.id,
                         name: h.name,
                         image: h.image || h.logo || local.image || 'https://placehold.co/600x400/eeeeee/888888?text=No+Image',
-                        doctors: local.doctors || [],
+                        doctors: doctorsByHospital[String(h.id)] || local.doctors || [],
                         ...h
                     };
                 });

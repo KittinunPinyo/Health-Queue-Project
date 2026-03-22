@@ -4,6 +4,7 @@ import sqlite3 from 'sqlite3';
 import { promisify } from 'util';
 import { createUserRouter, hashPassword } from './userRouter.js';
 import { createHospitalsRouter } from '../hospitals/hospitalsRouter.js';
+import { createDoctorsRouter } from '../doctors/doctorsRouter.js';
 
 /**
  * Backend Server entrypoint
@@ -108,6 +109,26 @@ async function initializeDatabase() {
       )
     `);
     console.log('Hospitals table ready.');
+
+    // สร้างตาราง doctors สำหรับจัดการแพทย์
+    await dbRun(`
+      CREATE TABLE IF NOT EXISTS doctors (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        specialty TEXT,
+        license_number TEXT,
+        phone TEXT,
+        email TEXT,
+        hospital_id INTEGER,
+        hospital TEXT,
+        experience_years INTEGER DEFAULT 0,
+        image TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (hospital_id) REFERENCES hospitals (id) ON DELETE SET NULL
+      )
+    `);
+    console.log('Doctors table ready.');
   } catch (err) {
     console.error('Database initialization error:', err);
   }
@@ -123,6 +144,8 @@ app.use(express.json());
 // รวมกลุ่ม API login/register/profile ไว้ที่ /api/auth
 app.use('/api/auth', createUserRouter({ db, dbGet, jwtSecret: JWT_SECRET }));// รวมกลุ่ม API hospitals ตามรูปตัวอย่าง
 app.use('/api/hospitals', createHospitalsRouter({ db, dbGet, dbAll, dbRun }));
+// รวมกลุ่ม API doctors ตามรูปตัวอย่าง
+app.use('/api/doctors', createDoctorsRouter({ db, dbGet, dbAll, dbRun }));
 /**
  * Routes
  */

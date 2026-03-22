@@ -158,8 +158,27 @@ function ClinicDetail() {
             }
 
             try {
-                const response = await axios.get('/api/hospitals');
-                const hospitals = response.data.hospitals || [];
+                const [hospitalsRes, doctorsRes] = await Promise.all([
+                    axios.get('/api/hospitals'),
+                    axios.get('/api/doctors'),
+                ]);
+                const hospitals = hospitalsRes.data.hospitals || [];
+                const doctors = doctorsRes.data.doctors || [];
+
+                const doctorsByHospital = doctors.reduce((acc, doctor) => {
+                    const key = String(doctor.hospitalId || '');
+                    if (!key) return acc;
+                    if (!acc[key]) acc[key] = [];
+                    acc[key].push({
+                        id: doctor.id,
+                        name: doctor.name || '',
+                        specialty: doctor.specialty || '',
+                        email: doctor.email || '',
+                        image: doctor.image || '',
+                    });
+                    return acc;
+                }, {});
+
                 clinics = hospitals.map((h) => {
                     const local = clinics.find((c) => String(c.id) === String(h.id)) || {};
                     return {
@@ -171,7 +190,7 @@ function ClinicDetail() {
                         phone: h.phone || local.phone || '',
                     email: h.email || local.email || '',
                     website: h.website || local.website || '',
-                    doctors: local.doctors || [],
+                        doctors: doctorsByHospital[String(h.id)] || local.doctors || [],
                 };
             });
             localStorage.setItem('clinicsData', JSON.stringify(clinics));
