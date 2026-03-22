@@ -3,6 +3,13 @@ import React, { useState, useEffect, useRef } from 'react';
 // --- SVG Icons ---
 const SendIcon = () => ( <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"> <line x1="22" y1="2" x2="11" y2="13"></line> <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon> </svg> );
 
+const generateId = () => {
+  if (globalThis.crypto?.randomUUID) {
+    return globalThis.crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+};
+
 export default function Chat() {
   const messagesEndRef = useRef(null);
   const [inputValue, setInputValue] = useState('');
@@ -26,7 +33,7 @@ export default function Chat() {
       // ถ้าไม่มีประวัติเลย ให้ใส่ข้อความต้อนรับ
       if (myChat.messages.length === 0) {
         const welcomeMsg = { 
-          id: 1, 
+          id: generateId(), 
           text: 'สวัสดีค่ะ! ยินดีให้บริการ มีอะไรให้ช่วยเหลือไหมคะ?', 
           sender: 'admin', 
           timestamp: new Date().toISOString() 
@@ -55,7 +62,7 @@ export default function Chat() {
     if (!text.trim() || !currentUser) return;
 
     const newMessage = {
-      id: Date.now(),
+      id: generateId(),
       text: text,
       sender: 'user',
       timestamp: new Date().toISOString()

@@ -26,7 +26,6 @@ function SearchResults() {
         ]);
         const hospitals = hospitalsRes.data.hospitals || [];
         const doctors = doctorsRes.data.doctors || [];
-        const storedClinics = JSON.parse(localStorage.getItem('clinicsData')) || [];
 
         const doctorsByHospital = doctors.reduce((acc, doctor) => {
           const key = String(doctor.hospitalId || '');
@@ -42,18 +41,16 @@ function SearchResults() {
           return acc;
         }, {});
 
-        clinics = hospitals.map((h) => {
-          const local = storedClinics.find((c) => String(c.id) === String(h.id)) || {};
-          return {
-            id: h.id,
-            name: h.name,
-            image: h.image || h.logo || local.image || 'https://placehold.co/600x400/eeeeee/888888?text=No+Image',
-            doctors: doctorsByHospital[String(h.id)] || local.doctors || [],
-            ...h,
-          };
-        });
+        clinics = hospitals.map((h) => ({
+          id: h.id,
+          name: h.name,
+          image: h.image || h.logo || 'https://placehold.co/600x400/eeeeee/888888?text=No+Image',
+          doctors: doctorsByHospital[String(h.id)] || [],
+          ...h,
+        }));
       } catch (error) {
-        clinics = JSON.parse(localStorage.getItem('clinicsData')) || [];
+        console.error('Search load hospitals/doctors error:', error);
+        clinics = [];
       }
 
       setClinicsData(clinics);

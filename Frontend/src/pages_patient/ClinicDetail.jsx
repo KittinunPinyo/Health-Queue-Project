@@ -10,6 +10,13 @@ const EMAILJS_CONFIG = {
     TEMPLATE_ID_AUTO_REPLY: "template_gqj3s6f"
 };
 
+const generateId = () => {
+    if (globalThis.crypto?.randomUUID) {
+        return globalThis.crypto.randomUUID();
+    }
+    return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+};
+
 // Icon Components
 const IconStethoscope = () => (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -318,7 +325,7 @@ function ClinicDetail() {
         const validAppointments = step2Data.appointments.filter(apt => apt.date && apt.time);
 
         const newRequest = { 
-            id: Date.now(), 
+            id: generateId(), 
             status: "new",
             patient: { 
                 id: currentUser.id, 

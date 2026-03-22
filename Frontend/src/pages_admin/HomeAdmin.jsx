@@ -9,6 +9,13 @@ const EMAILJS_CONFIG = {
     TEMPLATE_ID_NOTIFY_DOCTOR: "template_qje00uc" 
 };
 
+const generateId = () => {
+    if (globalThis.crypto?.randomUUID) {
+        return globalThis.crypto.randomUUID();
+    }
+    return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+};
+
 function HomeAdmin() {
     // --- State ---
     const [view, setView] = useState('home'); // 'home', 'new', 'history'
@@ -80,7 +87,7 @@ function HomeAdmin() {
     // --- Core Logic ---
     const createNotification = (patientId, type, message) => {
         const newNotification = {
-            id: Date.now(), patientId: patientId, type: type,
+            id: generateId(), patientId: patientId, type: type,
             message: message, timestamp: new Date().toISOString(), read: false
         };
         const updatedNotifications = [newNotification, ...notifications];

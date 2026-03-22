@@ -5,6 +5,13 @@ const SendIcon = () => ( <svg width="20" height="20" viewBox="0 0 24 24" fill="n
 const BackIcon = () => ( <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"> <path d="M19 12H5"></path> <path d="M12 19l-7-7 7-7"></path> </svg> );
 const UserAvatar = () => ( <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#e9ecef', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6c757d' }}> <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg> </div> );
 
+const generateId = () => {
+  if (globalThis.crypto?.randomUUID) {
+    return globalThis.crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+};
+
 export default function AdminChat() {
   const [selectedPatientId, setSelectedPatientId] = useState(null);
   const [inputValue, setInputValue] = useState('');
@@ -44,7 +51,7 @@ export default function AdminChat() {
 
     if (currentSession) {
       const newMessage = {
-        id: Date.now(),
+        id: generateId(),
         sender: 'admin',
         text: inputValue,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),

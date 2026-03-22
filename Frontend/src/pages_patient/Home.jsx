@@ -225,7 +225,6 @@ function Home() {
                 ]);
                 const hospitals = hospitalsRes.data.hospitals || [];
                 const doctors = doctorsRes.data.doctors || [];
-                const storedLocal = JSON.parse(localStorage.getItem('clinicsData')) || [];
 
                 const doctorsByHospital = doctors.reduce((acc, doctor) => {
                     const key = String(doctor.hospitalId || '');
@@ -241,16 +240,13 @@ function Home() {
                     return acc;
                 }, {});
 
-                const combined = hospitals.map((h) => {
-                    const local = storedLocal.find((c) => String(c.id) === String(h.id)) || {};
-                    return {
-                        id: h.id,
-                        name: h.name,
-                        image: h.image || h.logo || local.image || 'https://placehold.co/600x400/eeeeee/888888?text=No+Image',
-                        doctors: doctorsByHospital[String(h.id)] || local.doctors || [],
-                        ...h
-                    };
-                });
+                const combined = hospitals.map((h) => ({
+                    id: h.id,
+                    name: h.name,
+                    image: h.image || h.logo || 'https://placehold.co/600x400/eeeeee/888888?text=No+Image',
+                    doctors: doctorsByHospital[String(h.id)] || [],
+                    ...h
+                }));
 
                 setClinicsData(combined);
                 setFilteredClinics(combined);
@@ -272,27 +268,12 @@ function Home() {
                 }));
                 setDepartments(dynamicDepartments);
             } catch (error) {
-                const storedClinics = JSON.parse(localStorage.getItem('clinicsData')) || [];
-                setClinicsData(storedClinics);
-                setFilteredClinics(storedClinics);
-
-                if (storedClinics.length > 0) {
-                    setLocations([t('all'), ...storedClinics.map(c => c.name)]);
-                }
-
-                const activeSpecialties = new Set();
-                const doctorsList = [];
-                storedClinics.forEach(clinic => {
-                    (clinic.doctors || []).forEach(doc => {
-                        doctorsList.push({ ...doc, clinicId: clinic.id, clinicName: clinic.name, clinicImage: clinic.image });
-                        if (doc.specialty) activeSpecialties.add(doc.specialty.trim());
-                    });
-                });
-                setAllDoctors(doctorsList);
-                const dynamicDepartments = Array.from(activeSpecialties).map((specialty, index) => ({
-                    id: `dept-${index}`, name: specialty, icon: DEPARTMENT_ICONS[specialty] || DEFAULT_ICON
-                }));
-                setDepartments(dynamicDepartments);
+                console.error('Load hospitals/doctors error:', error);
+                setClinicsData([]);
+                setFilteredClinics([]);
+                setLocations([t('all')]);
+                setAllDoctors([]);
+                setDepartments([]);
             }
         };
 

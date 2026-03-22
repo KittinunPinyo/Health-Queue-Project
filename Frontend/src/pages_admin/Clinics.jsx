@@ -1,7 +1,14 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import axios from 'axios';
 import { useLanguage } from '../contexts/LanguageContext';
 // (CSS ถูก import ใน main.jsx แล้ว)
+
+const generateId = () => {
+    if (globalThis.crypto?.randomUUID) {
+        return globalThis.crypto.randomUUID();
+    }
+    return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+};
 
 // (Component: Modal แก้ไขแพทย์)
 function EditDoctorModal({ doctor, isOpen, onClose, onSave }) {
@@ -149,66 +156,57 @@ function Clinics() {
     const [isDoctorModalOpen, setIsDoctorModalOpen] = useState(false);
     const [currentEditingDoctor, setCurrentEditingDoctor] = useState(null);
 
-    // --- Data Loading ---
-    useEffect(() => {
-        const loadClinics = async () => {
-            try {
-                const [hospitalsRes, doctorsRes] = await Promise.all([
-                    axios.get('/api/hospitals'),
-                    axios.get('/api/doctors'),
-                ]);
-                const hospitals = hospitalsRes.data.hospitals || [];
-                const doctors = doctorsRes.data.doctors || [];
-                const localClinics = JSON.parse(localStorage.getItem('clinicsData')) || [];
+    const loadClinics = useCallback(async () => {
+        try {
+            const [hospitalsRes, doctorsRes] = await Promise.all([
+                axios.get('/api/hospitals'),
+                axios.get('/api/doctors'),
+            ]);
+            const hospitals = hospitalsRes.data.hospitals || [];
+            const doctors = doctorsRes.data.doctors || [];
 
-                const doctorsByHospital = doctors.reduce((acc, doctor) => {
-                    const key = String(doctor.hospitalId || '');
-                    if (!key) return acc;
-                    if (!acc[key]) acc[key] = [];
-                    acc[key].push({
-                        id: doctor.id,
-                        name: doctor.name || '',
-                        specialty: doctor.specialty || '',
-                        email: doctor.email || '',
-                        phone: doctor.phone || '',
-                        licenseNumber: doctor.licenseNumber || '',
-                        experienceYears: doctor.experienceYears || 0,
-                        image: doctor.image || '',
-                    });
-                    return acc;
-                }, {});
-
-                const mergedClinics = hospitals.map((hospital) => {
-                    const local = localClinics.find((c) => String(c.id) === String(hospital.id)) || {};
-                    return {
-                        id: hospital.id,
-                        name: hospital.name,
-                        address: hospital.address || '',
-                        phone: hospital.phone || '',
-                        email: hospital.email || '',
-                        website: hospital.website || '',
-                        logo: hospital.logo || hospital.image || '',
-                        image: hospital.image || hospital.logo || local.image || hospital.logo || 'https://placehold.co/600x400/eeeeee/888888?text=No+Image',
-                        doctors: doctorsByHospital[String(hospital.id)] || local.doctors || [],
-                    };
+            const doctorsByHospital = doctors.reduce((acc, doctor) => {
+                const key = String(doctor.hospitalId || '');
+                if (!key) return acc;
+                if (!acc[key]) acc[key] = [];
+                acc[key].push({
+                    id: doctor.id,
+                    name: doctor.name || '',
+                    specialty: doctor.specialty || '',
+                    email: doctor.email || '',
+                    phone: doctor.phone || '',
+                    licenseNumber: doctor.licenseNumber || '',
+                    experienceYears: doctor.experienceYears || 0,
+                    image: doctor.image || '',
                 });
+                return acc;
+            }, {});
 
-                setClinicsData(mergedClinics);
-                setClinicSearchTerm('');
-                localStorage.setItem('clinicsData', JSON.stringify(mergedClinics));
-            } catch (error) {
-                const storedClinics = JSON.parse(localStorage.getItem('clinicsData')) || [];
-                setClinicsData(storedClinics);
-            }
-        };
-        loadClinics();
+            const mergedClinics = hospitals.map((hospital) => ({
+                id: hospital.id,
+                name: hospital.name,
+                address: hospital.address || '',
+                phone: hospital.phone || '',
+                email: hospital.email || '',
+                website: hospital.website || '',
+                logo: hospital.logo || hospital.image || '',
+                image: hospital.image || hospital.logo || 'https://placehold.co/600x400/eeeeee/888888?text=No+Image',
+                doctors: doctorsByHospital[String(hospital.id)] || [],
+            }));
+
+            setClinicsData(mergedClinics);
+            setClinicSearchTerm('');
+            localStorage.setItem('clinicsData', JSON.stringify(mergedClinics));
+        } catch (error) {
+            console.error('Load clinics/doctors error:', error);
+            setClinicsData([]);
+        }
     }, []);
 
-    // --- Helper Functions ---
-    const saveClinicsData = (updatedData) => {
-        setClinicsData(updatedData);
-        localStorage.setItem('clinicsData', JSON.stringify(updatedData));
-    };
+    // --- Data Loading ---
+    useEffect(() => {
+        loadClinics();
+    }, [loadClinics]);
 
     // 🔹 [FIXED] เปลี่ยนมาใช้ระบบ Broadcast แบบ 'all' (ส่งหาทุกคน) 🔹
     // (วิธีนี้จะทำงานได้แน่นอน 100% แม้ไม่มี User ในระบบ หรือ User ใหม่)
@@ -216,7 +214,7 @@ function Clinics() {
         const currentNotifs = JSON.parse(localStorage.getItem('notifications')) || [];
         
         const newNotif = {
-            id: Date.now(),
+            id: generateId(),
             patientId: 'all', // 👈 คีย์สำคัญ: ส่งให้ทุกคน (Notifications.jsx จะกรองเจอนี้)
             type: 'system', 
             message: message,
@@ -284,16 +282,7 @@ function Clinics() {
                 logo: image,
             });
 
-            const hospital = response.data.hospital;
-            const newClinic = {
-                id: hospital.id,
-                name: hospital.name,
-                image: hospital.image || hospital.logo || image,
-                doctors: [],
-            };
-
-            const updated = [...clinicsData, newClinic];
-            saveClinicsData(updated);
+            await loadClinics();
             broadcastSystemNotification(`🎉 โรงพยาบาลใหม่! "${addClinicName}" เปิดให้บริการจองคิวแล้ว`);
 
             setAddClinicName('');
@@ -335,14 +324,7 @@ function Clinics() {
                 logo: image,
             });
 
-            const updatedData = clinicsData.map(c => {
-                if (c.id === selectedClinic.id) {
-                    return { ...c, name: editClinicName, image: image };
-                }
-                return c;
-            });
-
-            saveClinicsData(updatedData);
+            await loadClinics();
             alert('แก้ไขข้อมูลโรงพยาบาล/คลินิกเรียบร้อยแล้ว');
         } catch (error) {
             console.error('Edit clinic error:', error);
@@ -355,8 +337,7 @@ function Clinics() {
         if (window.confirm(`คุณต้องการลบโรงพยาบาล/คลินิก "${selectedClinic.name}" ใช่หรือไม่? \n(การกระทำนี้จะลบแพทย์ทั้งหมดในคลินิกนี้ด้วย!)`)) {
             try {
                 await axios.delete(`/api/hospitals/${selectedClinic.id}`);
-                const updatedData = clinicsData.filter(c => c.id !== selectedClinic.id);
-                saveClinicsData(updatedData);
+                await loadClinics();
                 alert('ลบโรงพยาบาล/คลินิกเรียบร้อยแล้ว');
                 handleBackToMaster();
             } catch (error) {
@@ -406,28 +387,10 @@ function Clinics() {
             });
 
             const createdDoctor = response.data.doctor;
-            const newDoctor = {
-                id: createdDoctor.id,
-                name: createdDoctor.name,
-                specialty: createdDoctor.specialty || 'ไม่มีแผนก',
-                email: createdDoctor.email || '',
-                phone: createdDoctor.phone || '',
-                licenseNumber: createdDoctor.licenseNumber || '',
-                experienceYears: createdDoctor.experienceYears || 0,
-                image: createdDoctor.image || '',
-                packages: [],
-            };
-
-            const updatedData = clinicsData.map(c => {
-                if (c.id === selectedClinic.id) {
-                    return { ...c, doctors: [...c.doctors, newDoctor] };
-                }
-                return c;
-            });
-            saveClinicsData(updatedData);
+            await loadClinics();
 
             // 🔹 แจ้งเตือนคนไข้ทุกคน 🔹
-            broadcastSystemNotification(`👨‍⚕️ แพทย์ท่านใหม่! ${newDoctor.name} (${newDoctor.specialty}) ประจำ${selectedClinic.name} พร้อมให้บริการ`);
+            broadcastSystemNotification(`👨‍⚕️ แพทย์ท่านใหม่! ${createdDoctor.name} (${createdDoctor.specialty || 'ไม่มีแผนก'}) ประจำ${selectedClinic.name} พร้อมให้บริการ`);
 
             setAddDoctorName('');
             setAddDoctorSpecialty('');
@@ -448,14 +411,7 @@ function Clinics() {
         if (window.confirm(`คุณต้องการลบแพทย์ "${doctor.name}" ใช่หรือไม่?`)) {
             try {
                 await axios.delete(`/api/doctors/${doctorId}`);
-                const updatedDoctors = selectedClinic.doctors.filter(d => d.id !== doctorId);
-                const updatedData = clinicsData.map(c => {
-                    if (c.id === selectedClinic.id) {
-                        return { ...c, doctors: updatedDoctors };
-                    }
-                    return c;
-                });
-                saveClinicsData(updatedData);
+                await loadClinics();
                 alert('ลบแพทย์เรียบร้อยแล้ว');
             } catch (error) {
                 console.error('Delete doctor error:', error);
@@ -491,27 +447,7 @@ function Clinics() {
                 hospital: selectedClinic.name,
             });
 
-            const updatedDoctor = response.data.doctor;
-            const updatedDoctors = selectedClinic.doctors.map(d => {
-                if (d.id === doctorId) {
-                    return {
-                        ...d,
-                        ...updatedDoctorData,
-                        name: updatedDoctor.name,
-                        specialty: updatedDoctor.specialty || d.specialty,
-                        email: updatedDoctor.email || '',
-                        image: updatedDoctor.image || '',
-                    };
-                }
-                return d;
-            });
-            const updatedClinicsData = clinicsData.map(c => {
-                 if (c.id === selectedClinic.id) {
-                    return { ...c, doctors: updatedDoctors };
-                }
-                return c;
-            });
-            saveClinicsData(updatedClinicsData);
+            await loadClinics();
             alert('แก้ไขข้อมูลแพทย์เรียบร้อยแล้ว');
         } catch (error) {
             console.error('Edit doctor error:', error);

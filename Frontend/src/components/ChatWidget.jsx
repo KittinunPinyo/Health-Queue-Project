@@ -27,6 +27,13 @@ const StaffIcon = () => (
     </svg>
 );
 
+const generateId = () => {
+    if (globalThis.crypto?.randomUUID) {
+        return globalThis.crypto.randomUUID();
+    }
+    return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+};
+
 function ChatWidget() {
     const [isOpen, setIsOpen] = useState(false);
     const [inputValue, setInputValue] = useState('');
@@ -50,7 +57,7 @@ function ChatWidget() {
             
             if (myChat.messages.length === 0) {
                 const welcomeMsg = { 
-                    id: 1, 
+                    id: generateId(), 
                     text: 'สวัสดีครับ ยินดีให้บริการ มีอะไรให้ช่วยเหลือไหมครับ?', 
                     sender: 'admin', 
                     timestamp: new Date().toISOString() 
@@ -78,7 +85,7 @@ function ChatWidget() {
         if (!inputValue.trim() || !currentUser) return;
 
         const newMessage = {
-            id: Date.now(),
+            id: generateId(),
             text: inputValue,
             sender: 'user',
             timestamp: new Date().toISOString()
