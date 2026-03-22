@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import axios from 'axios';
 import { useLanguage } from '../contexts/LanguageContext.jsx';
 
 // --- CSS Styles (รวม CSS ทั้งหมด) ---
@@ -213,36 +214,73 @@ function Home() {
 
     // --- Effect: Load Data ---
     useEffect(() => {
-        const user = JSON.parse(sessionStorage.getItem('currentUser'));
-        setCurrentUser(user || { name: t('defaultUserName') });
-        
-        const storedClinics = JSON.parse(localStorage.getItem('clinicsData')) || []; 
-        setClinicsData(storedClinics);
-        setFilteredClinics(storedClinics);
+        const loadData = async () => {
+            const user = JSON.parse(sessionStorage.getItem('currentUser'));
+            setCurrentUser(user || { name: t('defaultUserName') });
 
-        if (storedClinics.length > 0) {
-            const clinicNames = storedClinics.map(c => c.name);
-            setLocations([t('all'), ...clinicNames]);
-        }
+            try {
+                const response = await axios.get('/api/hospitals');
+                const hospitals = response.data.hospitals || [];
+                const storedLocal = JSON.parse(localStorage.getItem('clinicsData')) || [];
 
-        const activeSpecialties = new Set();
-        const doctorsList = [];
-        
-        storedClinics.forEach(clinic => {
-            if (clinic.doctors) {
-                clinic.doctors.forEach(doc => {
-                    doctorsList.push({ ...doc, clinicId: clinic.id, clinicName: clinic.name, clinicImage: clinic.image });
-                    if (doc.specialty) activeSpecialties.add(doc.specialty.trim());
+                const combined = hospitals.map((h) => {
+                    const local = storedLocal.find((c) => String(c.id) === String(h.id)) || {};
+                    return {
+                        id: h.id,
+                        name: h.name,
+                        image: h.image || h.logo || local.image || 'https://placehold.co/600x400/eeeeee/888888?text=No+Image',
+                        doctors: local.doctors || [],
+                        ...h
+                    };
                 });
-            }
-        });
-        setAllDoctors(doctorsList);
 
-        const dynamicDepartments = Array.from(activeSpecialties).map((specialty, index) => {
-            return { id: `dept-${index}`, name: specialty, icon: DEPARTMENT_ICONS[specialty] || DEFAULT_ICON };
-        });
-        setDepartments(dynamicDepartments);
-    }, [location.pathname]); 
+                setClinicsData(combined);
+                setFilteredClinics(combined);
+                localStorage.setItem('clinicsData', JSON.stringify(combined));
+                setLocations([t('all'), ...combined.map(c => c.name)]);
+
+                const activeSpecialties = new Set();
+                const doctorsList = [];
+                combined.forEach(clinic => {
+                    (clinic.doctors || []).forEach(doc => {
+                        doctorsList.push({ ...doc, clinicId: clinic.id, clinicName: clinic.name, clinicImage: clinic.image });
+                        if (doc.specialty) activeSpecialties.add(doc.specialty.trim());
+                    });
+                });
+
+                setAllDoctors(doctorsList);
+                const dynamicDepartments = Array.from(activeSpecialties).map((specialty, index) => ({
+                    id: `dept-${index}`, name: specialty, icon: DEPARTMENT_ICONS[specialty] || DEFAULT_ICON
+                }));
+                setDepartments(dynamicDepartments);
+            } catch (error) {
+                const storedClinics = JSON.parse(localStorage.getItem('clinicsData')) || [];
+                setClinicsData(storedClinics);
+                setFilteredClinics(storedClinics);
+
+                if (storedClinics.length > 0) {
+                    setLocations([t('all'), ...storedClinics.map(c => c.name)]);
+                }
+
+                const activeSpecialties = new Set();
+                const doctorsList = [];
+                storedClinics.forEach(clinic => {
+                    (clinic.doctors || []).forEach(doc => {
+                        doctorsList.push({ ...doc, clinicId: clinic.id, clinicName: clinic.name, clinicImage: clinic.image });
+                        if (doc.specialty) activeSpecialties.add(doc.specialty.trim());
+                    });
+                });
+                setAllDoctors(doctorsList);
+                const dynamicDepartments = Array.from(activeSpecialties).map((specialty, index) => ({
+                    id: `dept-${index}`, name: specialty, icon: DEPARTMENT_ICONS[specialty] || DEFAULT_ICON
+                }));
+                setDepartments(dynamicDepartments);
+            }
+        };
+
+        loadData();
+    }, [location.pathname, t]);
+
 
     // --- Filter Logic (เฉพาะการเลือกโรงพยาบาล/ทำเล) ---
     useEffect(() => {

@@ -3,6 +3,7 @@ import cors from 'cors';
 import sqlite3 from 'sqlite3';
 import { promisify } from 'util';
 import { createUserRouter, hashPassword } from './userRouter.js';
+import { createHospitalsRouter } from '../hospitals/hospitalsRouter.js';
 
 /**
  * Backend Server entrypoint
@@ -90,6 +91,23 @@ async function initializeDatabase() {
       );
       console.log('✅ Default user created: testuser1@gmail.com / password123');
     }
+
+    // สร้างตาราง hospitals สำหรับจัดการโรงพยาบาล/คลินิกตาม API ใหม่
+    await dbRun(`
+      CREATE TABLE IF NOT EXISTS hospitals (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        address TEXT,
+        phone TEXT,
+        email TEXT,
+        website TEXT,
+        logo TEXT,
+        image TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('Hospitals table ready.');
   } catch (err) {
     console.error('Database initialization error:', err);
   }
@@ -103,8 +121,8 @@ async function initializeDatabase() {
 app.use(cors());
 app.use(express.json());
 // รวมกลุ่ม API login/register/profile ไว้ที่ /api/auth
-app.use('/api/auth', createUserRouter({ db, dbGet, jwtSecret: JWT_SECRET }));
-
+app.use('/api/auth', createUserRouter({ db, dbGet, jwtSecret: JWT_SECRET }));// รวมกลุ่ม API hospitals ตามรูปตัวอย่าง
+app.use('/api/hospitals', createHospitalsRouter({ db, dbGet, dbAll, dbRun }));
 /**
  * Routes
  */

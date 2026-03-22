@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import axios from 'axios';
 import { useLanguage } from '../contexts/LanguageContext';
 // (CSS ถูก import ใน main.jsx แล้ว)
 
@@ -150,8 +151,36 @@ function Clinics() {
 
     // --- Data Loading ---
     useEffect(() => {
-        const storedClinics = JSON.parse(localStorage.getItem('clinicsData')) || [];
-        setClinicsData(storedClinics);
+        const loadClinics = async () => {
+            try {
+                const response = await axios.get('/api/hospitals');
+                const hospitals = response.data.hospitals || [];
+                const localClinics = JSON.parse(localStorage.getItem('clinicsData')) || [];
+
+                const mergedClinics = hospitals.map((hospital) => {
+                    const local = localClinics.find((c) => String(c.id) === String(hospital.id)) || {};
+                    return {
+                        id: hospital.id,
+                        name: hospital.name,
+                        address: hospital.address || '',
+                        phone: hospital.phone || '',
+                        email: hospital.email || '',
+                        website: hospital.website || '',
+                        logo: hospital.logo || hospital.image || '',
+                        image: hospital.image || hospital.logo || local.image || hospital.logo || 'https://placehold.co/600x400/eeeeee/888888?text=No+Image',
+                        doctors: local.doctors || [],
+                    };
+                });
+
+                setClinicsData(mergedClinics);
+                setClinicSearchTerm('');
+                localStorage.setItem('clinicsData', JSON.stringify(mergedClinics));
+            } catch (error) {
+                const storedClinics = JSON.parse(localStorage.getItem('clinicsData')) || [];
+                setClinicsData(storedClinics);
+            }
+        };
+        loadClinics();
     }, []);
 
     // --- Helper Functions ---
@@ -220,21 +249,39 @@ function Clinics() {
 
 
     // --- Event Handlers (Clinic Master) ---
-    const handleAddClinic = (e) => {
+    const handleAddClinic = async (e) => {
         e.preventDefault();
-        let image = addClinicImage.trim();
-        if (image === '') {
-            image = `https://placehold.co/600x400/008080/FFFFFF?text=${encodeURIComponent(addClinicName)}`;
-        }
-        const newClinic = { id: Date.now(), name: addClinicName, image: image, doctors: [] };
-        saveClinicsData([...clinicsData, newClinic]);
-        
-        // 🔹 แจ้งเตือนคนไข้ทุกคน 🔹
-        broadcastSystemNotification(`🎉 โรงพยาบาลใหม่! "${addClinicName}" เปิดให้บริการจองคิวแล้ว`);
+        try {
+            const image = addClinicImage.trim() || `https://placehold.co/600x400/008080/FFFFFF?text=${encodeURIComponent(addClinicName)}`;
 
-        setAddClinicName('');
-        setAddClinicImage('');
-        alert('เพิ่มโรงพยาบาล/คลินิกใหม่ และแจ้งเตือนคนไข้เรียบร้อยแล้ว');
+            const response = await axios.post('/api/hospitals', {
+                name: addClinicName,
+                address: '',
+                phone: '',
+                email: '',
+                website: '',
+                logo: image,
+            });
+
+            const hospital = response.data.hospital;
+            const newClinic = {
+                id: hospital.id,
+                name: hospital.name,
+                image: hospital.image || hospital.logo || image,
+                doctors: [],
+            };
+
+            const updated = [...clinicsData, newClinic];
+            saveClinicsData(updated);
+            broadcastSystemNotification(`🎉 โรงพยาบาลใหม่! "${addClinicName}" เปิดให้บริการจองคิวแล้ว`);
+
+            setAddClinicName('');
+            setAddClinicImage('');
+            alert('เพิ่มโรงพยาบาล/คลินิกใหม่ และแจ้งเตือนคนไข้เรียบร้อยแล้ว');
+        } catch (error) {
+            console.error('Add clinic error:', error);
+            alert('ไม่สามารถเพิ่มโรงพยาบาลได้ ขณะนี้กรุณาลองใหม่อีกครั้ง');
+        }
     };
 
     const handleOpenClinicDetail = (id) => {
@@ -256,30 +303,45 @@ function Clinics() {
         window.scrollTo(0, 0);
     };
 
-    const handleEditClinic = (e) => {
+    const handleEditClinic = async (e) => {
         e.preventDefault();
         if (!selectedClinic) return;
-        let image = editClinicImage.trim();
-        if (image === '') {
-            image = `https://placehold.co/600x400/008080/FFFFFF?text=${encodeURIComponent(editClinicName)}`;
+
+        try {
+            const image = editClinicImage.trim() || `https://placehold.co/600x400/008080/FFFFFF?text=${encodeURIComponent(editClinicName)}`;
+            await axios.put(`/api/hospitals/${selectedClinic.id}`, {
+                name: editClinicName,
+                logo: image,
+            });
+
+            const updatedData = clinicsData.map(c => {
+                if (c.id === selectedClinic.id) {
+                    return { ...c, name: editClinicName, image: image };
+                }
+                return c;
+            });
+
+            saveClinicsData(updatedData);
+            alert('แก้ไขข้อมูลโรงพยาบาล/คลินิกเรียบร้อยแล้ว');
+        } catch (error) {
+            console.error('Edit clinic error:', error);
+            alert('ไม่สามารถแก้ไขข้อมูลโรงพยาบาลได้ ขณะนี้กรุณาลองใหม่อีกครั้ง');
         }
-        const updatedData = clinicsData.map(c => {
-            if (c.id === selectedClinic.id) {
-                return { ...c, name: editClinicName, image: image };
-            }
-            return c;
-        });
-        saveClinicsData(updatedData);
-        alert('แก้ไขข้อมูลโรงพยาบาล/คลินิกรียบร้อยแล้ว');
     };
 
-    const handleDeleteClinic = () => {
+    const handleDeleteClinic = async () => {
         if (!selectedClinic) return;
         if (window.confirm(`คุณต้องการลบโรงพยาบาล/คลินิก "${selectedClinic.name}" ใช่หรือไม่? \n(การกระทำนี้จะลบแพทย์ทั้งหมดในคลินิกนี้ด้วย!)`)) {
-            const updatedData = clinicsData.filter(c => c.id !== selectedClinic.id);
-            saveClinicsData(updatedData);
-            alert('ลบโรงพยาบาล/คลินิกเรียบร้อยแล้ว');
-            handleBackToMaster();
+            try {
+                await axios.delete(`/api/hospitals/${selectedClinic.id}`);
+                const updatedData = clinicsData.filter(c => c.id !== selectedClinic.id);
+                saveClinicsData(updatedData);
+                alert('ลบโรงพยาบาล/คลินิกเรียบร้อยแล้ว');
+                handleBackToMaster();
+            } catch (error) {
+                console.error('Delete clinic error:', error);
+                alert('ไม่สามารถลบโรงพยาบาลได้ในขณะนี้ กรุณาลองอีกครั้ง');
+            }
         }
     };
 

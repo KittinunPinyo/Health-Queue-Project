@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext.jsx';
 
@@ -16,40 +17,63 @@ function SearchResults() {
   const [activeTab, setActiveTab] = useState('all');
 
   useEffect(() => {
-    const storedClinics = JSON.parse(localStorage.getItem('clinicsData')) || [];
-    setClinicsData(storedClinics);
+    const runSearch = async () => {
+      let clinics = [];
+      try {
+        const response = await axios.get('/api/hospitals');
+        const hospitals = response.data.hospitals || [];
+        const storedClinics = JSON.parse(localStorage.getItem('clinicsData')) || [];
 
-    if (!query) {
-      setClinicResults([]);
-      setDoctorResults([]);
-      return;
-    }
+        clinics = hospitals.map((h) => {
+          const local = storedClinics.find((c) => String(c.id) === String(h.id)) || {};
+          return {
+            id: h.id,
+            name: h.name,
+            image: h.image || h.logo || local.image || 'https://placehold.co/600x400/eeeeee/888888?text=No+Image',
+            doctors: local.doctors || [],
+            ...h,
+          };
+        });
+      } catch (error) {
+        clinics = JSON.parse(localStorage.getItem('clinicsData')) || [];
+      }
 
-    const lowerQuery = query.toLowerCase();
+      setClinicsData(clinics);
 
-    const matchedClinics = storedClinics.filter((clinic) => {
-      if (clinic.name?.toLowerCase().includes(lowerQuery)) return true;
-      if (clinic.doctors?.some((doc) =>
-        doc.name?.toLowerCase().includes(lowerQuery) ||
-        doc.specialty?.toLowerCase().includes(lowerQuery)
-      )) return true;
-      return false;
-    });
+      if (!query) {
+        setClinicResults([]);
+        setDoctorResults([]);
+        return;
+      }
 
-    const matchedDoctors = [];
-    storedClinics.forEach((clinic) => {
-      (clinic.doctors || []).forEach((doc) => {
-        if (
+      const lowerQuery = query.toLowerCase();
+
+      const matchedClinics = clinics.filter((clinic) => {
+        if (clinic.name?.toLowerCase().includes(lowerQuery)) return true;
+        if (clinic.doctors?.some((doc) =>
           doc.name?.toLowerCase().includes(lowerQuery) ||
           doc.specialty?.toLowerCase().includes(lowerQuery)
-        ) {
-          matchedDoctors.push({ ...doc, clinicId: clinic.id, clinicName: clinic.name, clinicImage: clinic.image });
-        }
+        )) return true;
+        return false;
       });
-    });
 
-    setClinicResults(matchedClinics);
-    setDoctorResults(matchedDoctors);
+      const matchedDoctors = [];
+      clinics.forEach((clinic) => {
+        (clinic.doctors || []).forEach((doc) => {
+          if (
+            doc.name?.toLowerCase().includes(lowerQuery) ||
+            doc.specialty?.toLowerCase().includes(lowerQuery)
+          ) {
+            matchedDoctors.push({ ...doc, clinicId: clinic.id, clinicName: clinic.name, clinicImage: clinic.image });
+          }
+        });
+      });
+
+      setClinicResults(matchedClinics);
+      setDoctorResults(matchedDoctors);
+    };
+
+    runSearch();
   }, [query]);
 
   const handleSearch = () => {

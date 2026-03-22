@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom'; 
+import axios from 'axios';
 import emailjs from '@emailjs/browser';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -126,33 +127,56 @@ function ClinicDetail() {
     });
 
     useEffect(() => {
-        const user = JSON.parse(sessionStorage.getItem('currentUser'));
-        if (user) {
-            setCurrentUser(user);
-            const profile = user.healthProfile || {};
-            setStep3Data(prev => ({
-                ...prev,
-                firstName: user.name?.split(' ')[0] || '',
-                lastName: user.name?.split(' ').slice(1).join(' ') || '',
-                email: user.email || '',
-                phone: user.phone || '',
-                idCard: user.idCard || '',
-                gender: profile.gender === 'ชาย' ? 'male' : profile.gender === 'หญิง' ? 'female' : '',
-                nationality: 'thai',
-                relationship: 'self',
-                birthDate: '',
-                name: user.name || ''
-            }));
-        } else {
-            setCurrentUser(null);
-        }
+        const init = async () => {
+            const user = JSON.parse(sessionStorage.getItem('currentUser'));
+            if (user) {
+                setCurrentUser(user);
+                const profile = user.healthProfile || {};
+                setStep3Data(prev => ({
+                    ...prev,
+                    firstName: user.name?.split(' ')[0] || '',
+                    lastName: user.name?.split(' ').slice(1).join(' ') || '',
+                    email: user.email || '',
+                    phone: user.phone || '',
+                    idCard: user.idCard || '',
+                    gender: profile.gender === 'ชาย' ? 'male' : profile.gender === 'หญิง' ? 'female' : '',
+                    nationality: 'thai',
+                    relationship: 'self',
+                    birthDate: '',
+                    name: user.name || ''
+                }));
+            } else {
+                setCurrentUser(null);
+            }
 
-        const clinics = JSON.parse(localStorage.getItem('clinicsData')) || [];
-        const clinicId = localStorage.getItem('selectedClinicId');
-        
-        if (!clinicId) {
-            navigate('/patient/home', { replace: true }); 
-            return;
+            let clinics = JSON.parse(localStorage.getItem('clinicsData')) || [];
+            const clinicId = localStorage.getItem('selectedClinicId');
+            
+            if (!clinicId) {
+                navigate('/patient/home', { replace: true }); 
+                return;
+            }
+
+            try {
+                const response = await axios.get('/api/hospitals');
+                const hospitals = response.data.hospitals || [];
+                clinics = hospitals.map((h) => {
+                    const local = clinics.find((c) => String(c.id) === String(h.id)) || {};
+                    return {
+                        ...local,
+                        id: h.id,
+                        name: h.name,
+                        image: h.image || h.logo || local.image || 'https://placehold.co/600x400/eeeeee/888888?text=No+Image',
+                        address: h.address || local.address || '',
+                        phone: h.phone || local.phone || '',
+                    email: h.email || local.email || '',
+                    website: h.website || local.website || '',
+                    doctors: local.doctors || [],
+                };
+            });
+            localStorage.setItem('clinicsData', JSON.stringify(clinics));
+        } catch (error) {
+            // หาก API ไม่พร้อม ให้ใช้ localStorage เดิม
         }
 
         setClinicsData(clinics);
@@ -182,6 +206,10 @@ function ClinicDetail() {
         } catch (e) {
             console.error("EmailJS init failed.", e);
         }
+    };
+
+    init();
+
     }, [navigate]); 
 
     const clinic = useMemo(() => {
