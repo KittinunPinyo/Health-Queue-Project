@@ -218,8 +218,10 @@ function Appointments() {
 
     // --- Data Loading ---
     useEffect(() => {
-        const storedUsers = JSON.parse(localStorage.getItem('users')) || [];
+        const storedUsers = JSON.parse(sessionStorage.getItem('users') || localStorage.getItem('users') || '[]');
         const storedRequests = JSON.parse(localStorage.getItem('requests')) || [];
+        sessionStorage.setItem('users', JSON.stringify(storedUsers));
+        localStorage.removeItem('users');
         setUsers(storedUsers);
         setRequests(storedRequests);
     }, []); 
@@ -260,7 +262,7 @@ function Appointments() {
     const handleSaveUser = (userId, updatedData) => {
         const updatedUsers = users.map(u => u.id === userId ? { ...u, ...updatedData } : u);
         setUsers(updatedUsers);
-        localStorage.setItem('users', JSON.stringify(updatedUsers));
+        sessionStorage.setItem('users', JSON.stringify(updatedUsers));
         // alert('แก้ไขข้อมูลคนไข้เรียบร้อยแล้ว');
     };
 
@@ -269,7 +271,7 @@ function Appointments() {
         if (user && window.confirm(`คุณต้องการลบคนไข้ "${user.name}" ออกจากระบบใช่หรือไม่?`)) {
             const updatedUsers = users.filter(u => u.id !== userId);
             setUsers(updatedUsers);
-            localStorage.setItem('users', JSON.stringify(updatedUsers));
+            sessionStorage.setItem('users', JSON.stringify(updatedUsers));
         }
     };
 

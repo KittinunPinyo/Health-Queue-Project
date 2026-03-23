@@ -1,9 +1,11 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 // (CSS ถูก import ใน main.jsx แล้ว)
 
 function ProfileAdmin() {
     const navigate = useNavigate();
+    const { logout } = useAuth();
 
     // --- Event Handlers ---
     const handleAddAdmin = (e) => {
@@ -16,11 +18,10 @@ function ProfileAdmin() {
         alert('ฟังก์ชันเปลี่ยนรหัสผ่าน ยังไม่เปิดใช้งาน');
     };
 
-    const handleLogout = () => {
+    const handleLogout = async () => {
         if (window.confirm('คุณต้องการออกจากระบบ Admin ใช่หรือไม่?')) {
-            // 🔹 [FIX] 🔹
-            sessionStorage.removeItem('currentUser');
-            navigate('/login');
+            await logout();
+            navigate('/login', { replace: true });
         }
     };
 

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 // SVG Icons
 const HomeIcon = () => (
@@ -78,8 +79,10 @@ const HistoryIcon = () => (
 
 function AdminSidebar() {
     const location = useLocation();
+    const navigate = useNavigate();
     const [expandedMenus, setExpandedMenus] = useState(['appointments']); // เปิด นัดหมาย เป็นค่าเริ่มต้น
     const { t } = useLanguage();
+    const { logout } = useAuth();
 
     const toggleMenu = (menuId) => {
         setExpandedMenus(prev => 
@@ -109,9 +112,9 @@ function AdminSidebar() {
         { titleKey: 'settings', to: '/admin/profile', icon: <SettingsIcon /> },
     ];
 
-    const handleLogout = () => {
-        sessionStorage.removeItem('currentUser');
-        window.location.href = '/';
+    const handleLogout = async () => {
+        await logout();
+        navigate('/login', { replace: true });
     };
 
     return (

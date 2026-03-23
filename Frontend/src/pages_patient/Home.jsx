@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { useLanguage } from '../contexts/LanguageContext.jsx';
+import { useAuth } from '../contexts/AuthContext.jsx';
 
 // --- CSS Styles (รวม CSS ทั้งหมด) ---
 const styles = `
@@ -182,6 +183,7 @@ const SearchIcon = () => (
 
 function Home() {
     const { t } = useLanguage();
+    const { isAuthenticated } = useAuth();
     
     // Mock Data (Fallback if LocalStorage is empty)
     
@@ -315,6 +317,10 @@ function Home() {
     };
     
     const handleBookDoctor = (doctor) => {
+        if (!isAuthenticated) {
+            navigate('/login', { state: { from: location } });
+            return;
+        }
         localStorage.setItem('selectedClinicId', doctor.clinicId);
         localStorage.setItem('selectedDoctorId', doctor.id);
         localStorage.setItem('selectedDoctorData', JSON.stringify(doctor));
@@ -376,6 +382,78 @@ function Home() {
                         </div>
                     )}
                     
+                    {/* ──────────── GUEST HERO BANNER ──────────── */}
+                    {!isAuthenticated && (
+                      <div style={{
+                        position:'relative', overflow:'hidden',
+                        background:'linear-gradient(135deg,#0f172a 0%,#1e1b4b 45%,#1e3a8a 100%)',
+                        borderRadius:'28px',
+                        padding:'clamp(40px,8vw,80px) clamp(24px,6vw,60px)',
+                        marginBottom:'56px', marginTop:'24px',
+                      }}>
+                        {/* Glow orbs */}
+                        <div style={{position:'absolute',top:'-80px',right:'-80px',width:'400px',height:'400px',borderRadius:'50%',background:'radial-gradient(circle,rgba(99,102,241,0.25) 0%,transparent 70%)',pointerEvents:'none'}} />
+                        <div style={{position:'absolute',bottom:'-100px',left:'-60px',width:'350px',height:'350px',borderRadius:'50%',background:'radial-gradient(circle,rgba(59,130,246,0.2) 0%,transparent 70%)',pointerEvents:'none'}} />
+                        <div style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:'600px',height:'600px',borderRadius:'50%',background:'radial-gradient(circle,rgba(139,92,246,0.08) 0%,transparent 70%)',pointerEvents:'none'}} />
+
+                        <div style={{position:'relative',zIndex:1,textAlign:'center',maxWidth:'760px',margin:'0 auto'}}>
+                          {/* Badge */}
+                          <div style={{display:'inline-flex',alignItems:'center',gap:'8px',background:'rgba(99,102,241,0.18)',border:'1px solid rgba(99,102,241,0.4)',borderRadius:'24px',padding:'8px 20px',marginBottom:'28px'}}>
+                            <span style={{fontSize:'16px'}}>✨</span>
+                            <span style={{fontSize:'13px',color:'#a5b4fc',fontWeight:'600',letterSpacing:'0.02em'}}>ระบบนัดหมอออนไลน์ครบวงจร</span>
+                          </div>
+
+                          {/* Headline */}
+                          <h1 style={{fontSize:'clamp(28px,5vw,54px)',fontWeight:'800',color:'#fff',lineHeight:'1.2',marginBottom:'18px',letterSpacing:'-0.02em'}}>
+                            จัดการสุขภาพของคุณ<br/>
+                            <span style={{background:'linear-gradient(90deg,#60a5fa 0%,#a78bfa 50%,#f472b6 100%)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text'}}>
+                              ได้ทุกที่ ทุกเวลา
+                            </span>
+                          </h1>
+                          <p style={{fontSize:'clamp(14px,2vw,17px)',color:'#94a3b8',lineHeight:'1.8',maxWidth:'540px',margin:'0 auto 40px auto'}}>
+                            เลื่อนดูหมอและคลินิกได้เลย &mdash; เมื่อพร้อมแล้ว
+                            <strong style={{color:'#93c5fd'}}> เข้าสู่ระบบเพื่อจองนัด</strong> ดูประวัติ และรับการแจ้งเตือน
+                          </p>
+
+                          {/* CTA Buttons */}
+                          <div style={{display:'flex',gap:'14px',justifyContent:'center',flexWrap:'wrap',marginBottom:'50px'}}>
+                            <button
+                              onClick={() => navigate('/login')}
+                              onMouseEnter={e => e.currentTarget.style.transform='translateY(-2px)'}
+                              onMouseLeave={e => e.currentTarget.style.transform='translateY(0)'}
+                              style={{padding:'15px 40px',background:'linear-gradient(135deg,#3b82f6,#6366f1)',color:'white',border:'none',borderRadius:'16px',fontSize:'16px',fontWeight:'700',cursor:'pointer',boxShadow:'0 8px 28px rgba(99,102,241,0.45)',letterSpacing:'0.01em',transition:'transform 0.15s ease'}}>
+                              🔑 เข้าสู่ระบบ
+                            </button>
+                            <button
+                              onClick={() => navigate('/login',{state:{view:'register'}})}
+                              onMouseEnter={e => e.currentTarget.style.background='rgba(255,255,255,0.12)'}
+                              onMouseLeave={e => e.currentTarget.style.background='rgba(255,255,255,0.07)'}
+                              style={{padding:'15px 40px',background:'rgba(255,255,255,0.07)',color:'#e2e8f0',border:'1px solid rgba(255,255,255,0.18)',borderRadius:'16px',fontSize:'16px',fontWeight:'600',cursor:'pointer',backdropFilter:'blur(10px)',letterSpacing:'0.01em',transition:'background 0.2s'}}>
+                              📝 สมัครสมาชิกฟรี
+                            </button>
+                          </div>
+
+                          {/* Feature cards */}
+                          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(170px,1fr))',gap:'14px'}}>
+                            {[
+                              {icon:'📅',title:'จองนัดออนไลน์',desc:'เลือกวันและหมอตามใจ'},
+                              {icon:'🔔',title:'รับแจ้งเตือน',desc:'อัพเดทสถานะนัดทันที'},
+                              {icon:'📋',title:'ดูประวัตินัด',desc:'ตรวจสอบย้อนหลังได้'},
+                            ].map((f,i) => (
+                              <div key={i}
+                                onMouseEnter={e => e.currentTarget.style.transform='translateY(-4px)'}
+                                onMouseLeave={e => e.currentTarget.style.transform='translateY(0)'}
+                                style={{background:'rgba(255,255,255,0.05)',borderRadius:'18px',padding:'24px 16px',border:'1px solid rgba(255,255,255,0.08)',backdropFilter:'blur(8px)',textAlign:'center',transition:'transform 0.2s ease'}}>
+                                <div style={{fontSize:'34px',marginBottom:'10px'}}>{f.icon}</div>
+                                <div style={{color:'#f1f5f9',fontWeight:'700',fontSize:'14px',marginBottom:'6px'}}>{f.title}</div>
+                                <div style={{color:'#64748b',fontSize:'12px',lineHeight:'1.5'}}>{f.desc}</div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     {/* 1. Hero Section (Slider + Search) */}
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '40px', alignItems: 'center', marginBottom: '50px', marginTop: '30px' }}>
                         <div style={{ flex: '1 1 400px' }}>
@@ -474,6 +552,40 @@ function Home() {
                         )}
                     </div>
                     </>
+
+                    {/* ──── Mid-page Login CTA (guest) ──── */}
+                    {!isAuthenticated && (
+                      <div style={{
+                        position:'relative', overflow:'hidden',
+                        background:'linear-gradient(135deg,#1e40af 0%,#4f46e5 100%)',
+                        borderRadius:'24px', padding:'48px 32px',
+                        textAlign:'center', marginBottom:'40px',
+                      }}>
+                        <div style={{position:'absolute',top:'-50px',right:'-50px',width:'220px',height:'220px',borderRadius:'50%',background:'rgba(255,255,255,0.06)',pointerEvents:'none'}} />
+                        <div style={{position:'absolute',bottom:'-40px',left:'-40px',width:'180px',height:'180px',borderRadius:'50%',background:'rgba(255,255,255,0.04)',pointerEvents:'none'}} />
+                        <div style={{position:'relative',zIndex:1}}>
+                          <p style={{color:'#bfdbfe',fontSize:'13px',fontWeight:'600',letterSpacing:'0.08em',marginBottom:'10px',textTransform:'uppercase'}}>พร้อมจองแล้วใช่ไหม?</p>
+                          <h3 style={{color:'white',fontSize:'clamp(18px,3vw,28px)',fontWeight:'800',marginBottom:'10px'}}>เข้าสู่ระบบเพื่อจองนัดหมาย 🏥</h3>
+                          <p style={{color:'#93c5fd',fontSize:'14px',marginBottom:'30px',lineHeight:'1.6'}}>สมัครฟรี ใช้งานได้ทันที ไม่มีค่าใช้จ่ายใดๆ</p>
+                          <div style={{display:'flex',gap:'12px',justifyContent:'center',flexWrap:'wrap'}}>
+                            <button
+                              onClick={() => navigate('/login')}
+                              onMouseEnter={e => e.currentTarget.style.opacity='0.9'}
+                              onMouseLeave={e => e.currentTarget.style.opacity='1'}
+                              style={{padding:'13px 36px',background:'white',color:'#1e40af',border:'none',borderRadius:'14px',fontWeight:'700',fontSize:'15px',cursor:'pointer',boxShadow:'0 6px 20px rgba(0,0,0,0.2)',transition:'opacity 0.2s'}}>
+                              🔑 เข้าสู่ระบบ
+                            </button>
+                            <button
+                              onClick={() => navigate('/login',{state:{view:'register'}})}
+                              onMouseEnter={e => e.currentTarget.style.background='rgba(255,255,255,0.2)'}
+                              onMouseLeave={e => e.currentTarget.style.background='rgba(255,255,255,0.12)'}
+                              style={{padding:'13px 36px',background:'rgba(255,255,255,0.12)',color:'white',border:'1px solid rgba(255,255,255,0.3)',borderRadius:'14px',fontWeight:'600',fontSize:'15px',cursor:'pointer',transition:'background 0.2s'}}>
+                              📝 สมัครสมาชิกฟรี
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     {/* 5. Departments */}
                     <div className="department-section">

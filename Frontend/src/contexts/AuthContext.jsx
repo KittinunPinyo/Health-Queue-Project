@@ -16,6 +16,18 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState(localStorage.getItem('token'));
 
+  const clearStoredSession = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('users');
+    localStorage.removeItem('selectedClinicId');
+    localStorage.removeItem('selectedDoctorId');
+    localStorage.removeItem('selectedDoctorData');
+    sessionStorage.removeItem('currentUser');
+    sessionStorage.removeItem('users');
+    delete axios.defaults.headers.common['Authorization'];
+  };
+
   // Configure axios defaults
   axios.defaults.baseURL = 'http://localhost:5000';
 
@@ -58,8 +70,7 @@ export const AuthProvider = ({ children }) => {
           localStorage.setItem('user', JSON.stringify(user));
         } catch (error) {
           // Token invalid, clear storage
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
+          clearStoredSession();
           setToken(null);
           setUser(null);
         }
@@ -101,7 +112,7 @@ export const AuthProvider = ({ children }) => {
       setUser(user);
       localStorage.setItem('user', JSON.stringify(user));
 
-      return { success: true };
+      return { success: true, user };
     } catch (error) {
       return {
         success: false,
@@ -139,9 +150,7 @@ export const AuthProvider = ({ children }) => {
 
     setUser(null);
     setToken(null);
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    delete axios.defaults.headers.common['Authorization'];
+    clearStoredSession();
   };
 
   const value = {
@@ -153,8 +162,8 @@ export const AuthProvider = ({ children }) => {
     logout,
     updateUser,
     isAuthenticated: !!user,
-    isAdmin: user?.role === 'admin',
-    isPatient: user?.role === 'patient'
+    isAdmin: (user?.role || '').toLowerCase() === 'admin',
+    isPatient: (user?.role || '').toLowerCase() === 'patient'
   };
 
   return (

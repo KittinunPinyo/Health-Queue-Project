@@ -34,8 +34,12 @@ function HomeAdmin() {
     // --- Data Loading ---
     useEffect(() => {
         const storedRequests = JSON.parse(localStorage.getItem('requests')) || [];
-        const storedUsers = JSON.parse(localStorage.getItem('users')) || [];
+        const storedUsers = JSON.parse(sessionStorage.getItem('users') || localStorage.getItem('users') || '[]');
         const storedNotifications = JSON.parse(localStorage.getItem('notifications')) || [];
+
+        // Keep patient list in session storage only; remove old persistent copy.
+        sessionStorage.setItem('users', JSON.stringify(storedUsers));
+        localStorage.removeItem('users');
         
         setRequests(storedRequests);
         setUsers(storedUsers);

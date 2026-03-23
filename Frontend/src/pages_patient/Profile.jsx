@@ -83,19 +83,20 @@ function Profile() {
         setView('display');
     };
 
-    const handleLogout = () => {
+    const handleLogout = async () => {
         if (window.confirm(t('confirmLogout'))) {
-            logout();
-            navigate('/login');
+            await logout();
+            navigate('/login', { replace: true });
         }
     };
     
-    const handleDeleteAccount = () => {
+    const handleDeleteAccount = async () => {
         if (!currentUser) return;
         if (window.confirm(t('confirmDeleteAccount'))) {
-            let users = JSON.parse(localStorage.getItem('users')) || [];
+            let users = JSON.parse(sessionStorage.getItem('users') || localStorage.getItem('users') || '[]');
             users = users.filter(u => u.id !== currentUser.id);
-            localStorage.setItem('users', JSON.stringify(users));
+            sessionStorage.setItem('users', JSON.stringify(users));
+            localStorage.removeItem('users');
             
             let requests = JSON.parse(localStorage.getItem('requests')) || [];
             requests = requests.filter(r => r.patient?.id !== currentUser.id);
@@ -106,9 +107,9 @@ function Profile() {
             localStorage.setItem('notifications', JSON.stringify(notifications));
             try { window.dispatchEvent(new CustomEvent('notifications-changed', { detail: { reason: 'account-deleted' } })); } catch(e) {}
 
-                alert(t('accountDeleted'));
-            sessionStorage.removeItem('currentUser');
-            navigate('/login');
+            await logout();
+            alert(t('accountDeleted'));
+            navigate('/login', { replace: true });
         }
     };
 

@@ -175,13 +175,13 @@ const authContainerStyle = {
 };
 
 function Login() {
-    const [view, setView] = useState('login');
-    const [regStep, setRegStep] = useState(1); 
-    const [alertState, setAlertState] = useState({ isOpen: false, message: '', type: 'error' });
-
     const navigate = useNavigate();
     const location = useLocation();
     const { login, register } = useAuth();
+
+    const [view, setView] = useState(location.state?.view === 'register' ? 'register' : 'login');
+    const [regStep, setRegStep] = useState(1); 
+    const [alertState, setAlertState] = useState({ isOpen: false, message: '', type: 'error' });
     
     const fromPath = location.state?.from?.pathname; 
     let fromPatient = "/patient/home";
@@ -238,22 +238,14 @@ function Login() {
     const handleLogin = async (e) => {
         e.preventDefault();
         const email = loginEmail.trim();
-
-        // Special handling for admin login
-        if (email.endsWith('@admin.com')) {
-            const result = await login(email, loginPassword);
-            if (result.success) {
-                navigate(fromAdmin, { replace: true });
-            } else {
-                showAlert(result.error);
-            }
-            return;
-        }
-
-        // Regular patient login
         const result = await login(email, loginPassword);
         if (result.success) {
-            navigate(fromPatient, { replace: true });
+            const role = String(result.user?.role || '').toLowerCase();
+            if (role === 'admin') {
+                navigate(fromAdmin, { replace: true });
+            } else {
+                navigate(fromPatient, { replace: true });
+            }
         } else {
             showAlert(result.error);
         }

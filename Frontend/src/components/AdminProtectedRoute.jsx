@@ -7,12 +7,18 @@ import { useAuth } from '../contexts/AuthContext';
  */
 function AdminProtectedRoute() {
   const location = useLocation();
-  const { isAdmin, loading } = useAuth();
+  const { isAdmin, isAuthenticated, loading } = useAuth();
 
   if (loading) {
     return <div>Loading...</div>;
   }
 
+  // ล็อกอินแต่เป็น Patient → ไปหน้า Patient แทน
+  if (isAuthenticated && !isAdmin) {
+    return <Navigate to="/patient/home" replace />;
+  }
+
+  // ยังไม่ล็อกอิน → ไปหน้า Login
   if (!isAdmin) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }

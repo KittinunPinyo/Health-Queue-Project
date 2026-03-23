@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import { useLocation, Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -7,20 +7,18 @@ import { useAuth } from '../contexts/AuthContext';
  */
 function ProtectedRoute() {
   const location = useLocation();
-  const { isAuthenticated, loading } = useAuth();
-  const alertShownRef = useRef(false);
-
-  useEffect(() => {
-    if (!loading && !isAuthenticated && !alertShownRef.current) {
-      alert('กรุณาล็อกอินเพื่อเข้าสู่หน้านี้');
-      alertShownRef.current = true;
-    }
-  }, [isAuthenticated, loading]);
+  const { isAuthenticated, isAdmin, loading } = useAuth();
 
   if (loading) {
     return <div>Loading...</div>;
   }
 
+  // ล็อกอินแต่เป็น Admin → ไปหน้า Admin แทน
+  if (isAuthenticated && isAdmin) {
+    return <Navigate to="/admin/home" replace />;
+  }
+
+  // ยังไม่ล็อกอิน → ไปหน้า Login
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }

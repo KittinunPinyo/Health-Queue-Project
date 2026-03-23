@@ -44,18 +44,12 @@ function PatientLayout() {
     const location = useLocation();
     const navigate = useNavigate();
     const { t } = useLanguage();
-    const currentUser = JSON.parse(localStorage.getItem('user'));
     const headerProps = getHeaderProps(location.pathname, t);
     const onBackClick = headerProps.onBack ? () => navigate(-1) : null; 
 
     useEffect(() => {
-        if (currentUser && currentUser.role === 'admin') {
-            navigate('/admin/home', { replace: true });
-        }
         updateNotificationBadge();
-    }, [location.pathname, navigate, currentUser]);
-
-    if (currentUser && currentUser.role === 'admin') return null; 
+    }, [location.pathname]);
 
     return (
         // ใช้ class "page-container" จาก FooterLayout.css เพื่อทำ Flexbox แนวตั้ง
