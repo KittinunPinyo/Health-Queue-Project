@@ -1,5 +1,11 @@
-import sqlite3 from 'sqlite3';
+﻿import pkg from 'pg';
 import bcrypt from 'bcryptjs';
+
+const { Pool } = pkg;
+
+const DATABASE_URL =
+  process.env.DATABASE_URL ||
+  'postgresql://neondb_owner:npg_tzvGTRZP2w1p@ep-gentle-river-a1y5lnep-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require';
 
 // รับคำสั่งจาก terminal เช่น list-users หรือ reset-password
 const action = process.argv[2];
@@ -16,28 +22,26 @@ if (!action) {
   process.exit(1);
 }
 
-const db = new sqlite3.Database('database.db', (err) => {
-  if (err) {
-    console.error('DB open error', err);
-    process.exit(1);
-  }
+const pool = new Pool({
+  connectionString: DATABASE_URL,
+  ssl: { rejectUnauthorized: false },
 });
 
-function closeAndExit(code = 0) {
-  db.close(() => process.exit(code));
+async function closeAndExit(code = 0) {
+  await pool.end();
+  process.exit(code);
 }
 
 if (action === 'list-users') {
   // แสดงผู้ใช้ทั้งหมดแบบตารางเพื่อใช้ตรวจสอบข้อมูล
-  db.all('SELECT id, name, email, id_card, role FROM users', (err, rows) => {
-    if (err) {
-      console.error('Query error', err);
-      closeAndExit(1);
-      return;
-    }
+  try {
+    const { rows } = await pool.query('SELECT id, name, email, id_card, role FROM users');
     console.table(rows);
-    closeAndExit(0);
-  });
+    await closeAndExit(0);
+  } catch (err) {
+    console.error('Query error', err);
+    await closeAndExit(1);
+  }
 } else if (action === 'reset-password') {
   // รีเซ็ตรหัสผ่านตาม email โดย hash ก่อนอัปเดตเสมอ
   const email = process.argv[3];
@@ -45,59 +49,46 @@ if (action === 'list-users') {
 
   if (!email) {
     console.error('Usage: node src/user/user-admin-tools.js reset-password <email> [newPassword]');
-    closeAndExit(1);
+    await closeAndExit(1);
   } else {
-    bcrypt.hash(newPassword, 10, (hashErr, hash) => {
-      if (hashErr) {
-        console.error('Hash error', hashErr);
-        closeAndExit(1);
-        return;
-      }
-
-      db.run('UPDATE users SET password = ? WHERE email = ?', [hash, email], function onUpdate(updateErr) {
-        if (updateErr) {
-          console.error('Update error', updateErr);
-          closeAndExit(1);
-          return;
-        }
-
-        if (this.changes === 0) {
-          console.error('No user found with email', email);
-          closeAndExit(1);
-          return;
-        }
-
+    try {
+      const hash = await bcrypt.hash(newPassword, 10);
+      const result = await pool.query('UPDATE users SET password = $1 WHERE email = $2', [hash, email]);
+      if (result.rowCount === 0) {
+        console.error('No user found with email', email);
+        await closeAndExit(1);
+      } else {
         console.log('Password updated for', email);
-        closeAndExit(0);
-      });
-    });
+        await closeAndExit(0);
+      }
+    } catch (err) {
+      console.error('Error:', err);
+      await closeAndExit(1);
+    }
   }
 } else if (action === 'promote-admin') {
   const email = process.argv[3];
 
   if (!email) {
     console.error('Usage: node src/user/user-admin-tools.js promote-admin <email>');
-    closeAndExit(1);
+    await closeAndExit(1);
   } else {
-    db.run('UPDATE users SET role = ? WHERE email = ?', ['admin', email], function onUpdate(updateErr) {
-      if (updateErr) {
-        console.error('Update error', updateErr);
-        closeAndExit(1);
-        return;
-      }
-
-      if (this.changes === 0) {
+    try {
+      const result = await pool.query('UPDATE users SET role = $1 WHERE email = $2', ['admin', email]);
+      if (result.rowCount === 0) {
         console.error('No user found with email', email);
-        closeAndExit(1);
-        return;
+        await closeAndExit(1);
+      } else {
+        console.log('User promoted to admin for', email);
+        await closeAndExit(0);
       }
-
-      console.log('User promoted to admin for', email);
-      closeAndExit(0);
-    });
+    } catch (err) {
+      console.error('Error:', err);
+      await closeAndExit(1);
+    }
   }
 } else {
   console.error('Unknown action:', action);
   printUsage();
-  closeAndExit(1);
+  await closeAndExit(1);
 }

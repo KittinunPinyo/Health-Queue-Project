@@ -1,10 +1,12 @@
 import express from 'express';
 import cors from 'cors';
-import sqlite3 from 'sqlite3';
-import { promisify } from 'util';
+import swaggerUi from 'swagger-ui-express';
 import { createUserRouter, hashPassword } from './userRouter.js';
+import { openApiDocument } from './swagger.js';
 import { createHospitalsRouter } from '../hospitals/hospitalsRouter.js';
 import { createDoctorsRouter } from '../doctors/doctorsRouter.js';
+import { createAppointmentsRouter } from '../appointments/appointmentsRouter.js';
+import pool, { dbGet, dbAll, dbRun, dbInsert } from './db.js';
 
 /**
  * Backend Server entrypoint
@@ -21,28 +23,18 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-producti
 /**
  * Database setup
  * ----------------
- * สร้างไฟล์ database.db และตารางผู้ใช้/ตารางนัดหมาย ถ้ายังไม่มี
+ * สร้างตารางใน PostgreSQL (Neon) ถ้ายังไม่มี
  */
-const db = new sqlite3.Database('./database.db', (err) => {
-  if (err) {
-    console.error('Error opening database:', err.message);
-    process.exit(1);
-  }
-  console.log('Connected to SQLite database.');
-  initializeDatabase();
-});
-
-// Promisify sqlite3 methods for async/await convenience
-const dbRun = promisify(db.run.bind(db));
-const dbGet = promisify(db.get.bind(db));
-const dbAll = promisify(db.all.bind(db));
-
 async function initializeDatabase() {
   try {
+    // ทดสอบการเชื่อมต่อ
+    await pool.query('SELECT 1');
+    console.log('Connected to PostgreSQL (Neon) database.');
+
     // สร้างตาราง users สำหรับข้อมูลบัญชีผู้ใช้
     await dbRun(`
       CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         name TEXT NOT NULL,
         email TEXT UNIQUE NOT NULL,
         password TEXT NOT NULL,
@@ -55,8 +47,8 @@ async function initializeDatabase() {
         medical_conditions TEXT,
         allergies TEXT,
         role TEXT DEFAULT 'patient',
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
     console.log('Users table ready.');
@@ -64,31 +56,67 @@ async function initializeDatabase() {
     // สร้างตาราง appointments สำหรับข้อมูลการนัดหมาย
     await dbRun(`
       CREATE TABLE IF NOT EXISTS appointments (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         user_id INTEGER NOT NULL,
         clinic_id INTEGER NOT NULL,
+        clinic_name TEXT,
+        patient_name TEXT,
+        patient_email TEXT,
+        patient_phone TEXT,
+        patient_id_card TEXT,
         doctor_name TEXT,
         appointment_date DATE NOT NULL,
         appointment_time TIME NOT NULL,
         symptoms TEXT,
         status TEXT DEFAULT 'pending',
         appointment_type TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        source_request_id TEXT,
+        doctor_selection_type TEXT,
+        selected_specialty TEXT,
+        selected_specialty_detail TEXT,
+        selected_doctor TEXT,
+        appointments_json JSONB DEFAULT '[]'::jsonb,
+        attached_files_json JSONB DEFAULT '[]'::jsonb,
+        relationship TEXT,
+        gender TEXT,
+        birth_date DATE,
+        nationality TEXT,
+        booking_payload JSONB DEFAULT '{}'::jsonb,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users (id)
       )
     `);
+
+    // เพิ่มคอลัมน์ใหม่แบบปลอดภัยสำหรับฐานข้อมูลที่ถูกสร้างไว้แล้ว
+    await dbRun(`ALTER TABLE appointments ADD COLUMN IF NOT EXISTS clinic_name TEXT`);
+    await dbRun(`ALTER TABLE appointments ADD COLUMN IF NOT EXISTS patient_name TEXT`);
+    await dbRun(`ALTER TABLE appointments ADD COLUMN IF NOT EXISTS patient_email TEXT`);
+    await dbRun(`ALTER TABLE appointments ADD COLUMN IF NOT EXISTS patient_phone TEXT`);
+    await dbRun(`ALTER TABLE appointments ADD COLUMN IF NOT EXISTS patient_id_card TEXT`);
+    await dbRun(`ALTER TABLE appointments ADD COLUMN IF NOT EXISTS source_request_id TEXT`);
+    await dbRun(`ALTER TABLE appointments ADD COLUMN IF NOT EXISTS doctor_selection_type TEXT`);
+    await dbRun(`ALTER TABLE appointments ADD COLUMN IF NOT EXISTS selected_specialty TEXT`);
+    await dbRun(`ALTER TABLE appointments ADD COLUMN IF NOT EXISTS selected_specialty_detail TEXT`);
+    await dbRun(`ALTER TABLE appointments ADD COLUMN IF NOT EXISTS selected_doctor TEXT`);
+    await dbRun(`ALTER TABLE appointments ADD COLUMN IF NOT EXISTS appointments_json JSONB DEFAULT '[]'::jsonb`);
+    await dbRun(`ALTER TABLE appointments ADD COLUMN IF NOT EXISTS attached_files_json JSONB DEFAULT '[]'::jsonb`);
+    await dbRun(`ALTER TABLE appointments ADD COLUMN IF NOT EXISTS relationship TEXT`);
+    await dbRun(`ALTER TABLE appointments ADD COLUMN IF NOT EXISTS gender TEXT`);
+    await dbRun(`ALTER TABLE appointments ADD COLUMN IF NOT EXISTS birth_date DATE`);
+    await dbRun(`ALTER TABLE appointments ADD COLUMN IF NOT EXISTS nationality TEXT`);
+    await dbRun(`ALTER TABLE appointments ADD COLUMN IF NOT EXISTS booking_payload JSONB DEFAULT '{}'::jsonb`);
+    await dbRun(`ALTER TABLE appointments ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`);
     console.log('Appointments table ready.');
 
     // Seed a default account on a fresh database so login works out-of-the-box.
     const row = await dbGet('SELECT COUNT(*) AS count FROM users');
-    if (row?.count === 0) {
+    if (Number(row?.count) === 0) {
       const defaultPassword = await hashPassword('password123');
-      await dbRun(
-        `
-          INSERT INTO users (name, email, password, id_card, date_of_birth, age, gender, height, weight, medical_conditions, allergies, role)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'patient')
-        `,
-        ['Test User', 'testuser1@gmail.com', defaultPassword, '1234567890123', '2000-01-01', 26, 'ชาย', 170, 65, '', '',]
+      await dbInsert(
+        `INSERT INTO users (name, email, password, id_card, date_of_birth, age, gender, height, weight, medical_conditions, allergies, role)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'patient')`,
+        ['Test User', 'testuser1@gmail.com', defaultPassword, '1234567890123', '2000-01-01', 26, 'ชาย', 170, 65, '', '']
       );
       console.log('✅ Default user created: testuser1@gmail.com / password123');
     }
@@ -96,7 +124,7 @@ async function initializeDatabase() {
     // สร้างตาราง hospitals สำหรับจัดการโรงพยาบาล/คลินิกตาม API ใหม่
     await dbRun(`
       CREATE TABLE IF NOT EXISTS hospitals (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         name TEXT NOT NULL,
         address TEXT,
         phone TEXT,
@@ -104,8 +132,8 @@ async function initializeDatabase() {
         website TEXT,
         logo TEXT,
         image TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
     console.log('Hospitals table ready.');
@@ -113,7 +141,7 @@ async function initializeDatabase() {
     // สร้างตาราง doctors สำหรับจัดการแพทย์
     await dbRun(`
       CREATE TABLE IF NOT EXISTS doctors (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         name TEXT NOT NULL,
         specialty TEXT,
         license_number TEXT,
@@ -123,14 +151,15 @@ async function initializeDatabase() {
         hospital TEXT,
         experience_years INTEGER DEFAULT 0,
         image TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (hospital_id) REFERENCES hospitals (id) ON DELETE SET NULL
       )
     `);
     console.log('Doctors table ready.');
   } catch (err) {
     console.error('Database initialization error:', err);
+    process.exit(1);
   }
 }
 
@@ -141,11 +170,21 @@ async function initializeDatabase() {
  */
 app.use(cors());
 app.use(express.json());
+app.get('/api-docs.json', (req, res) => {
+  res.json(openApiDocument);
+});
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openApiDocument, {
+  explorer: true,
+  customSiteTitle: 'Health Queue API Docs',
+}));
 // รวมกลุ่ม API login/register/profile ไว้ที่ /api/auth
-app.use('/api/auth', createUserRouter({ db, dbGet, jwtSecret: JWT_SECRET }));// รวมกลุ่ม API hospitals ตามรูปตัวอย่าง
-app.use('/api/hospitals', createHospitalsRouter({ db, dbGet, dbAll, dbRun }));
+app.use('/api/auth', createUserRouter({ dbGet, dbInsert, jwtSecret: JWT_SECRET }));
+// รวมกลุ่ม API hospitals ตามรูปตัวอย่าง
+app.use('/api/hospitals', createHospitalsRouter({ dbGet, dbAll, dbRun, dbInsert }));
 // รวมกลุ่ม API doctors ตามรูปตัวอย่าง
-app.use('/api/doctors', createDoctorsRouter({ db, dbGet, dbAll, dbRun }));
+app.use('/api/doctors', createDoctorsRouter({ dbGet, dbAll, dbRun, dbInsert }));
+// รวมกลุ่ม API appointments สำหรับการจองคิวและดึงรายการนัด
+app.use('/api/appointments', createAppointmentsRouter({ dbAll, dbGet, dbInsert }));
 /**
  * Routes
  */
@@ -163,7 +202,8 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Internal server error' });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
+  await initializeDatabase();
   console.log(`Backend listening on http://localhost:${PORT}`);
 });
 

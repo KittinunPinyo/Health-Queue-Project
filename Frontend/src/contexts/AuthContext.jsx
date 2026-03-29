@@ -16,6 +16,8 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState(localStorage.getItem('token'));
 
+  const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim();
+
   const clearStoredSession = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -29,7 +31,18 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Configure axios defaults
-  axios.defaults.baseURL = 'http://localhost:5000';
+  axios.defaults.baseURL = API_BASE_URL;
+
+  const persistCurrentUser = (nextUser) => {
+    if (nextUser) {
+      localStorage.setItem('user', JSON.stringify(nextUser));
+      sessionStorage.setItem('currentUser', JSON.stringify(nextUser));
+      return;
+    }
+
+    localStorage.removeItem('user');
+    sessionStorage.removeItem('currentUser');
+  };
 
   // Set authorization header if token exists
   useEffect(() => {
@@ -67,9 +80,12 @@ export const AuthProvider = ({ children }) => {
 
           setUser(user);
           setToken(storedToken);
-          localStorage.setItem('user', JSON.stringify(user));
+          persistCurrentUser(user);
         } catch (error) {
           // Token invalid, clear storage
+          if (!error.response) {
+            console.error('Profile check failed: backend unavailable or network error.');
+          }
           clearStoredSession();
           setToken(null);
           setUser(null);
@@ -110,13 +126,17 @@ export const AuthProvider = ({ children }) => {
       };
 
       setUser(user);
-      localStorage.setItem('user', JSON.stringify(user));
+      persistCurrentUser(user);
 
       return { success: true, user };
     } catch (error) {
+      const fallbackMessage = !error.response
+        ? 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ กรุณาเปิด Backend ที่พอร์ต 5000 แล้วลองใหม่'
+        : 'Login failed';
+
       return {
         success: false,
-        error: error.response?.data?.error || 'Login failed'
+        error: error.response?.data?.error || fallbackMessage
       };
     }
   };
@@ -126,9 +146,13 @@ export const AuthProvider = ({ children }) => {
       const response = await axios.post('/api/auth/register', userData);
       return { success: true, message: response.data.message };
     } catch (error) {
+      const fallbackMessage = !error.response
+        ? 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ กรุณาเปิด Backend ที่พอร์ต 5000 แล้วลองใหม่'
+        : 'Registration failed';
+
       return {
         success: false,
-        error: error.response?.data?.error || 'Registration failed'
+        error: error.response?.data?.error || fallbackMessage
       };
     }
   };
@@ -136,7 +160,7 @@ export const AuthProvider = ({ children }) => {
   const updateUser = (updates) => {
     setUser((prev) => {
       const next = { ...prev, ...updates };
-      localStorage.setItem('user', JSON.stringify(next));
+      persistCurrentUser(next);
       return next;
     });
   };

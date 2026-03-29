@@ -19,7 +19,7 @@ function mapDoctorRow(row) {
   };
 }
 
-export function createDoctorsRouter({ db, dbGet, dbAll, dbRun }) {
+export function createDoctorsRouter({ dbGet, dbAll, dbRun, dbInsert }) {
   const router = Router();
 
   async function resolveHospitalContext({ hospitalId, hospital }) {
@@ -116,30 +116,22 @@ export function createDoctorsRouter({ db, dbGet, dbAll, dbRun }) {
 
       const resolvedHospital = await resolveHospitalContext({ hospitalId, hospital });
 
-      const insertResult = await new Promise((resolve, reject) => {
-        db.run(
-          `
-            INSERT INTO doctors
-            (name, specialty, license_number, phone, email, hospital_id, hospital, experience_years, image, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-          `,
-          [
-            name.trim(),
-            specialty.trim(),
-            licenseNumber.trim(),
-            phone.trim(),
-            email.trim(),
-            resolvedHospital.hospitalId,
-            resolvedHospital.hospital,
-            Number.isFinite(Number(experienceYears)) ? Number(experienceYears) : 0,
-            image.trim(),
-          ],
-          function onInsert(err) {
-            if (err) return reject(err);
-            return resolve({ lastID: this.lastID });
-          }
-        );
-      });
+      const insertResult = await dbInsert(
+        `INSERT INTO doctors
+          (name, specialty, license_number, phone, email, hospital_id, hospital, experience_years, image, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+        [
+          name.trim(),
+          specialty.trim(),
+          licenseNumber.trim(),
+          phone.trim(),
+          email.trim(),
+          resolvedHospital.hospitalId,
+          resolvedHospital.hospital,
+          Number.isFinite(Number(experienceYears)) ? Number(experienceYears) : 0,
+          image.trim(),
+        ]
+      );
 
       const created = await dbGet(
         `

@@ -17,6 +17,21 @@ const generateId = () => {
     return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 };
 
+const readStoredUser = () => {
+    try {
+        const sessionUser = JSON.parse(sessionStorage.getItem('currentUser') || 'null');
+        if (sessionUser) return sessionUser;
+
+        const localUser = JSON.parse(localStorage.getItem('user') || 'null');
+        if (localUser) {
+            sessionStorage.setItem('currentUser', JSON.stringify(localUser));
+        }
+        return localUser;
+    } catch {
+        return null;
+    }
+};
+
 // Icon Components
 const IconStethoscope = () => (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -135,7 +150,7 @@ function ClinicDetail() {
 
     useEffect(() => {
         const init = async () => {
-            const user = JSON.parse(sessionStorage.getItem('currentUser'));
+            const user = readStoredUser();
             if (user) {
                 setCurrentUser(user);
                 const profile = user.healthProfile || {};
@@ -298,13 +313,17 @@ function ClinicDetail() {
     };
 
     const handleSubmit = async () => {
-        if (!currentUser) {
+        const activeUser = currentUser || readStoredUser();
+
+        if (!activeUser) {
             alert(t('pleaseLogin'));
             navigate('/login', { state: { from: location.pathname } }); 
             return;
         }
 
-        if (currentUser.role === 'admin') {
+        setCurrentUser(activeUser);
+
+        if (activeUser.role === 'admin') {
             alert(t('adminCannotBook'));
             return;
         }
@@ -328,7 +347,7 @@ function ClinicDetail() {
             id: generateId(), 
             status: "new",
             patient: { 
-                id: currentUser.id, 
+                id: activeUser.id, 
                 name: fullName || step3Data.name, 
                 email: step3Data.email,
                 phone: step3Data.phone,
@@ -346,10 +365,24 @@ function ClinicDetail() {
             time: validAppointments[0]?.time || step2Data.time,
             symptoms: step2Data.symptoms || step3Data.symptoms,
             attachedFiles: step2Data.attachedFiles.map(f => f.name),
-            relationship: step3Data.relationship
+            relationship: step3Data.relationship,
+            gender: step3Data.gender,
+            birthDate: step3Data.birthDate,
+            nationality: step3Data.nationality
         };
 
-        const profile = currentUser.healthProfile || {};
+        let storedRequest = newRequest;
+
+        try {
+            const response = await axios.post('/api/appointments', newRequest);
+            if (response?.data?.appointment) {
+                storedRequest = response.data.appointment;
+            }
+        } catch (error) {
+            console.warn('ไม่สามารถบันทึกข้อมูลนัดหมายลง backend ได้ จะเก็บไว้ในเครื่องแทน:', error);
+        }
+
+        const profile = activeUser.healthProfile || {};
         const genderDisplay = profile.gender ? (profile.gender === 'ชาย' ? t('male') : profile.gender === 'หญิง' ? t('female') : profile.gender) : 'N/A';
         const healthDataString = `${t('age')}: ${profile.age || 'N/A'} ${t('years')}, ${t('gender')}: ${genderDisplay}\n${t('weight')}: ${profile.weight || 'N/A'} ${t('kg')}, ${t('height')}: ${profile.height || 'N/A'} ${t('cm')}\n${t('chronicDiseases')}: ${profile.conditions || t('none')}\n${t('drugAllergies')}: ${profile.allergies || t('none')}`;
 
@@ -385,7 +418,7 @@ function ClinicDetail() {
         }
         
         const requests = JSON.parse(localStorage.getItem('requests')) || [];
-        requests.push(newRequest);
+        requests.push(storedRequest);
         localStorage.setItem('requests', JSON.stringify(requests));
         
         setCurrentStep(4);

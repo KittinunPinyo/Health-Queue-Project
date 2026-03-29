@@ -1,6 +1,6 @@
 import { Router } from 'express';
 
-export function createHospitalsRouter({ db, dbGet, dbAll, dbRun }) {
+export function createHospitalsRouter({ dbGet, dbAll, dbRun, dbInsert }) {
   const router = Router();
 
   router.get('/', async (req, res) => {
@@ -31,17 +31,11 @@ export function createHospitalsRouter({ db, dbGet, dbAll, dbRun }) {
         return res.status(400).json({ error: 'Name is required' });
       }
 
-      const insertResult = await new Promise((resolve, reject) => {
-        db.run(
-          `INSERT INTO hospitals (name, address, phone, email, website, logo, image, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
-          [name.trim(), address.trim(), phone.trim(), email.trim(), website.trim(), logo.trim(), logo.trim()],
-          function (err) {
-            if (err) return reject(err);
-            resolve({ lastID: this.lastID });
-          }
-        );
-      });
+      const insertResult = await dbInsert(
+        `INSERT INTO hospitals (name, address, phone, email, website, logo, image, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+        [name.trim(), address.trim(), phone.trim(), email.trim(), website.trim(), logo.trim(), logo.trim()]
+      );
 
       const hospital = await dbGet('SELECT * FROM hospitals WHERE id = ?', [insertResult.lastID]);
       return res.status(201).json({ message: 'Hospital created', hospital });

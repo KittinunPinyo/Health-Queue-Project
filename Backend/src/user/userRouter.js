@@ -34,7 +34,7 @@ function verifyToken(token, jwtSecret) {
 export { hashPassword };
 
 // สร้าง router ของกลุ่ม API ผู้ใช้ (register/login/profile/logout)
-export function createUserRouter({ db, dbGet, jwtSecret }) {
+export function createUserRouter({ dbGet, dbInsert, jwtSecret }) {
   const router = Router();
 
   // middleware ตรวจ token สำหรับ endpoint ที่ต้องล็อกอิน
@@ -78,20 +78,11 @@ export function createUserRouter({ db, dbGet, jwtSecret }) {
 
     const hashedPassword = await hashPassword(password);
 
-    // sqlite3.run ใช้ callback จึงห่อด้วย Promise เพื่อให้ใช้ await ได้
-    const result = await new Promise((resolve, reject) => {
-      db.run(
-        `
-          INSERT INTO users (name, email, password, id_card, date_of_birth, age, gender, height, weight, medical_conditions, allergies, role)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'patient')
-        `,
-        [name, email, hashedPassword, idCard, dateOfBirth, age, gender, height, weight, medicalConditions, allergies],
-        function onInsert(err) {
-          if (err) return reject(err);
-          return resolve({ lastID: this.lastID });
-        }
-      );
-    });
+    const result = await dbInsert(
+      `INSERT INTO users (name, email, password, id_card, date_of_birth, age, gender, height, weight, medical_conditions, allergies, role)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'patient')`,
+      [name, email, hashedPassword, idCard, dateOfBirth, age, gender, height, weight, medicalConditions, allergies]
+    );
 
     return dbGet(
       'SELECT id, name, email, role, id_card, date_of_birth, age, gender, height, weight, medical_conditions, allergies FROM users WHERE id = ?',
