@@ -20,6 +20,7 @@ function EditDoctorModal({ doctor, isOpen, onClose, onSave }) {
             setFormData({
                 name: doctor.name || '',
                 specialty: doctor.specialty || '',
+                phone: doctor.phone || '',
                 email: doctor.email || '',
                 image: doctor.image || '',
             });
@@ -123,6 +124,11 @@ function EditDoctorModal({ doctor, isOpen, onClose, onSave }) {
                         <input type="email" id="edit-doctor-email" className="input" required 
                                value={formData.email} onChange={handleChange} />
                     </div>
+                    <div className="input-group">
+                        <label htmlFor="edit-doctor-phone">เบอร์โทรแพทย์</label>
+                        <input type="tel" id="edit-doctor-phone" className="input"
+                               value={formData.phone} onChange={handleChange} />
+                    </div>
                     <hr />
                     <button type="submit" className="btn btn-success">บันทึกการเปลี่ยนแปลง</button>
                 </form>
@@ -150,6 +156,7 @@ function Clinics() {
     const [addDoctorImage, setAddDoctorImage] = useState('');
     const [addDoctorImagePreview, setAddDoctorImagePreview] = useState('');
     const [addDoctorEmail, setAddDoctorEmail] = useState('');
+    const [addDoctorPhone, setAddDoctorPhone] = useState('');
     const [clinicSearchTerm, setClinicSearchTerm] = useState('');
     const [doctorSearchTerm, setDoctorSearchTerm] = useState('');
     const [activeSpecialty, setActiveSpecialty] = useState('all');
@@ -175,8 +182,6 @@ function Clinics() {
                     specialty: doctor.specialty || '',
                     email: doctor.email || '',
                     phone: doctor.phone || '',
-                    licenseNumber: doctor.licenseNumber || '',
-                    experienceYears: doctor.experienceYears || 0,
                     image: doctor.image || '',
                 });
                 return acc;
@@ -378,9 +383,7 @@ function Clinics() {
                 name: addDoctorName,
                 specialty: addDoctorSpecialty || 'ไม่มีแผนก',
                 email: addDoctorEmail,
-                phone: '',
-                licenseNumber: '',
-                experienceYears: 0,
+                phone: addDoctorPhone,
                 image: addDoctorImage,
                 hospitalId: selectedClinic.id,
                 hospital: selectedClinic.name,
@@ -395,6 +398,7 @@ function Clinics() {
             setAddDoctorName('');
             setAddDoctorSpecialty('');
             setAddDoctorEmail('');
+            setAddDoctorPhone('');
             setAddDoctorImage('');
             setAddDoctorImagePreview('');
             alert('เพิ่มแพทย์ใหม่ และแจ้งเตือนคนไข้เรียบร้อยแล้ว');
@@ -441,6 +445,7 @@ function Clinics() {
             const response = await axios.put(`/api/doctors/${doctorId}`, {
                 name: updatedDoctorData.name,
                 specialty: updatedDoctorData.specialty,
+                phone: updatedDoctorData.phone,
                 email: updatedDoctorData.email,
                 image: updatedDoctorData.image,
                 hospitalId: selectedClinic.id,
@@ -709,6 +714,12 @@ function Clinics() {
                                                value={addDoctorEmail} onChange={(e) => setAddDoctorEmail(e.target.value)}
                                                style={{width: '100%', padding: '0.9rem', borderRadius: '12px', border: '1px solid #d1d5db', fontSize: '1.05rem'}} />
                                     </div>
+                                    <div style={{marginBottom: '1.25rem'}}>
+                                        <label style={{display: 'block', marginBottom: '0.5rem', fontSize: '1.05rem', fontWeight: 500, color: '#374151'}}>เบอร์โทรแพทย์</label>
+                                        <input type="tel" className="input" placeholder="08x-xxx-xxxx"
+                                               value={addDoctorPhone} onChange={(e) => setAddDoctorPhone(e.target.value)}
+                                               style={{width: '100%', padding: '0.9rem', borderRadius: '12px', border: '1px solid #d1d5db', fontSize: '1.05rem'}} />
+                                    </div>
                                     <button type="submit" style={{
                                         width: '100%', padding: '1rem', background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
                                         color: 'white', border: 'none', borderRadius: '12px', fontWeight: 600, cursor: 'pointer', fontSize: '1.1rem'
@@ -837,6 +848,12 @@ function Clinics() {
                                                         <polyline points="22,6 12,13 2,6"></polyline>
                                                     </svg>
                                                     {doctor.email || 'ไม่มีอีเมล'}
+                                                </p>
+                                                <p style={{margin: '0.5rem 0 0 0', fontSize: '0.9rem', color: '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem'}}>
+                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.12.81.33 1.6.61 2.36a2 2 0 0 1-.45 2.11L8 9.91a16 16 0 0 0 6.09 6.09l1.72-1.27a2 2 0 0 1 2.11-.45c.76.28 1.55.49 2.36.61a2 2 0 0 1 1.72 2Z"></path>
+                                                    </svg>
+                                                    {doctor.phone || 'ไม่มีเบอร์โทร'}
                                                 </p>
                                             </div>
                                             

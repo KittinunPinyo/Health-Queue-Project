@@ -147,12 +147,10 @@ export const openApiDocument = {
           id: { type: 'integer', example: 1 },
           name: { type: 'string', example: 'Dr. Somchai' },
           specialty: { type: 'string', example: 'Cardiology' },
-          licenseNumber: { type: 'string', example: 'LIC-001' },
           phone: { type: 'string', example: '02-111-1111' },
           email: { type: 'string', format: 'email', example: 'doctor@hospital.test' },
           hospitalId: { type: 'integer', nullable: true, example: 1 },
           hospital: { type: 'string', example: 'Health Queue Hospital' },
-          experienceYears: { type: 'integer', example: 10 },
           image: { type: 'string', example: 'https://hospital.test/doctor.png' },
           createdAt: { type: 'string', format: 'date-time' },
           updatedAt: { type: 'string', format: 'date-time' },
@@ -164,12 +162,10 @@ export const openApiDocument = {
         properties: {
           name: { type: 'string', example: 'Dr. Somchai' },
           specialty: { type: 'string', example: 'Cardiology' },
-          licenseNumber: { type: 'string', example: 'LIC-001' },
           phone: { type: 'string', example: '02-111-1111' },
           email: { type: 'string', format: 'email', example: 'doctor@hospital.test' },
           hospitalId: { type: 'integer', nullable: true, example: 1 },
           hospital: { type: 'string', example: 'Health Queue Hospital' },
-          experienceYears: { type: 'integer', example: 10 },
           image: { type: 'string', example: 'https://hospital.test/doctor.png' },
         },
       },
@@ -836,6 +832,56 @@ export const openApiDocument = {
         ],
         responses: {
           200: { description: 'Doctor deleted' },
+        },
+      },
+    },
+    '/api/doctors/{id}/image': {
+      post: {
+        tags: ['Doctors'],
+        summary: 'Upload a doctor profile image',
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'integer' },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'multipart/form-data': {
+              schema: {
+                type: 'object',
+                required: ['image'],
+                properties: {
+                  image: {
+                    type: 'string',
+                    format: 'binary',
+                    description: 'Image file (jpg, png, webp, etc.) — max 2MB',
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'Doctor image updated',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    message: { type: 'string', example: 'Doctor image updated' },
+                    doctor: { $ref: '#/components/schemas/Doctor' },
+                  },
+                },
+              },
+            },
+          },
+          400: { description: 'No file provided or file too large / wrong type' },
+          404: { description: 'Doctor not found' },
         },
       },
     },

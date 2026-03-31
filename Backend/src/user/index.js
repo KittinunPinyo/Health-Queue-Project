@@ -148,18 +148,18 @@ async function initializeDatabase() {
         id SERIAL PRIMARY KEY,
         name TEXT NOT NULL,
         specialty TEXT,
-        license_number TEXT,
         phone TEXT,
         email TEXT,
         hospital_id INTEGER,
         hospital TEXT,
-        experience_years INTEGER DEFAULT 0,
         image TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (hospital_id) REFERENCES hospitals (id) ON DELETE SET NULL
       )
     `);
+    await dbRun(`ALTER TABLE doctors DROP COLUMN IF EXISTS license_number`);
+    await dbRun(`ALTER TABLE doctors DROP COLUMN IF EXISTS experience_years`);
     console.log('Doctors table ready.');
   } catch (err) {
     console.error('Database initialization error:', err);

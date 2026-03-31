@@ -1,4 +1,16 @@
 import { Router } from 'express';
+import multer from 'multer';
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
+  fileFilter: (_req, file, cb) => {
+    if (!file.mimetype.startsWith('image/')) {
+      return cb(new Error('Only image files are allowed'));
+    }
+    cb(null, true);
+  },
+});
 
 function mapDoctorRow(row) {
   if (!row) return null;
@@ -7,12 +19,10 @@ function mapDoctorRow(row) {
     id: row.id,
     name: row.name,
     specialty: row.specialty || '',
-    licenseNumber: row.license_number || '',
     phone: row.phone || '',
     email: row.email || '',
     hospitalId: row.hospital_id ?? null,
     hospital: row.hospital || row.hospital_name || '',
-    experienceYears: row.experience_years ?? 0,
     image: row.image || '',
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -101,12 +111,10 @@ export function createDoctorsRouter({ dbGet, dbAll, dbRun, dbInsert }) {
       const {
         name,
         specialty = '',
-        licenseNumber = '',
         phone = '',
         email = '',
         hospitalId = null,
         hospital = '',
-        experienceYears = 0,
         image = '',
       } = req.body;
 
@@ -118,17 +126,15 @@ export function createDoctorsRouter({ dbGet, dbAll, dbRun, dbInsert }) {
 
       const insertResult = await dbInsert(
         `INSERT INTO doctors
-          (name, specialty, license_number, phone, email, hospital_id, hospital, experience_years, image, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+          (name, specialty, phone, email, hospital_id, hospital, image, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
         [
           name.trim(),
           specialty.trim(),
-          licenseNumber.trim(),
           phone.trim(),
           email.trim(),
           resolvedHospital.hospitalId,
           resolvedHospital.hospital,
-          Number.isFinite(Number(experienceYears)) ? Number(experienceYears) : 0,
           image.trim(),
         ]
       );
@@ -163,12 +169,10 @@ export function createDoctorsRouter({ dbGet, dbAll, dbRun, dbInsert }) {
       const {
         name,
         specialty,
-        licenseNumber,
         phone,
         email,
         hospitalId,
         hospital,
-        experienceYears,
         image,
       } = req.body;
 
@@ -183,10 +187,6 @@ export function createDoctorsRouter({ dbGet, dbAll, dbRun, dbInsert }) {
         updates.push('specialty = ?');
         params.push(String(specialty).trim());
       }
-      if (licenseNumber !== undefined) {
-        updates.push('license_number = ?');
-        params.push(String(licenseNumber).trim());
-      }
       if (phone !== undefined) {
         updates.push('phone = ?');
         params.push(String(phone).trim());
@@ -198,10 +198,6 @@ export function createDoctorsRouter({ dbGet, dbAll, dbRun, dbInsert }) {
       if (image !== undefined) {
         updates.push('image = ?');
         params.push(String(image).trim());
-      }
-      if (experienceYears !== undefined) {
-        updates.push('experience_years = ?');
-        params.push(Number.isFinite(Number(experienceYears)) ? Number(experienceYears) : 0);
       }
 
       if (hospitalId !== undefined || hospital !== undefined) {
@@ -252,6 +248,49 @@ export function createDoctorsRouter({ dbGet, dbAll, dbRun, dbInsert }) {
     } catch (err) {
       console.error('DELETE /api/doctors/:id error:', err);
       return res.status(500).json({ error: 'Unable to delete doctor' });
+    }
+  });
+
+  router.post('/:id/image', (req, res, next) => {
+    upload.single('image')(req, res, (err) => {
+      if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({ error: 'File size must not exceed 2MB' });
+      }
+      if (err) {
+        return res.status(400).json({ error: err.message });
+      }
+      next();
+    });
+  }, async (req, res) => {
+    try {
+      const existing = await dbGet('SELECT id FROM doctors WHERE id = ?', [req.params.id]);
+      if (!existing) {
+        return res.status(404).json({ error: 'Doctor not found' });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ error: 'Image file is required' });
+      }
+
+      const base64 = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+
+      await dbRun(
+        'UPDATE doctors SET image = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+        [base64, req.params.id]
+      );
+
+      const updated = await dbGet(
+        `SELECT d.*, h.name AS hospital_name
+         FROM doctors d
+         LEFT JOIN hospitals h ON h.id = d.hospital_id
+         WHERE d.id = ?`,
+        [req.params.id]
+      );
+
+      return res.json({ message: 'Doctor image updated', doctor: mapDoctorRow(updated) });
+    } catch (err) {
+      console.error('POST /api/doctors/:id/image error:', err);
+      return res.status(500).json({ error: 'Unable to update doctor image' });
     }
   });
 
