@@ -83,6 +83,30 @@ export const openApiDocument = {
           token: { type: 'string', example: 'jwt-token-here' },
         },
       },
+      UpdateProfileRequest: {
+        type: 'object',
+        required: ['name'],
+        properties: {
+          name: { type: 'string', example: 'Kittinun Chanyan' },
+          phone: { type: 'string', nullable: true, example: '0812345678' },
+          idCard: { type: 'string', nullable: true, example: '1234567890123' },
+          dateOfBirth: { type: 'string', format: 'date', nullable: true, example: '2005-09-09' },
+          age: { type: 'integer', nullable: true, example: 20 },
+          gender: { type: 'string', nullable: true, example: 'หญิง' },
+          height: { type: 'number', nullable: true, example: 170 },
+          weight: { type: 'number', nullable: true, example: 65 },
+          medicalConditions: { type: 'string', nullable: true, example: '-' },
+          allergies: { type: 'string', nullable: true, example: '-' },
+        },
+      },
+      ChangePasswordRequest: {
+        type: 'object',
+        required: ['currentPassword', 'newPassword'],
+        properties: {
+          currentPassword: { type: 'string', example: 'password123' },
+          newPassword: { type: 'string', minLength: 8, example: 'newPassword123' },
+        },
+      },
       Hospital: {
         type: 'object',
         properties: {
@@ -391,6 +415,161 @@ export const openApiDocument = {
                     message: { type: 'string', example: 'Logged out successfully' },
                   },
                 },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/user/profile': {
+      put: {
+        tags: ['Auth'],
+        summary: 'Update authenticated user profile',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/UpdateProfileRequest' },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'Profile updated successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    message: { type: 'string', example: 'Profile updated successfully' },
+                    user: { $ref: '#/components/schemas/UserProfile' },
+                  },
+                },
+              },
+            },
+          },
+          400: {
+            description: 'Validation error',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+              },
+            },
+          },
+          401: {
+            description: 'Missing token',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+              },
+            },
+          },
+          403: {
+            description: 'Invalid token',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/user/password': {
+      put: {
+        tags: ['Auth'],
+        summary: 'Change authenticated user password',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/ChangePasswordRequest' },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'Password updated successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    message: { type: 'string', example: 'Password updated successfully' },
+                  },
+                },
+              },
+            },
+          },
+          400: {
+            description: 'Validation error or wrong current password',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+              },
+            },
+          },
+          401: {
+            description: 'Missing token',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+              },
+            },
+          },
+          403: {
+            description: 'Invalid token',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/user/account': {
+      delete: {
+        tags: ['Auth'],
+        summary: 'Delete authenticated user account',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'Account deleted successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    message: { type: 'string', example: 'Account deleted successfully' },
+                  },
+                },
+              },
+            },
+          },
+          401: {
+            description: 'Missing token',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+              },
+            },
+          },
+          403: {
+            description: 'Invalid token',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+              },
+            },
+          },
+          500: {
+            description: 'Failed to delete account',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
               },
             },
           },

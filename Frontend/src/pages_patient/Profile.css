@@ -1,0 +1,70 @@
+/* ============================================================
+   Profile.css — Styles for Patient Profile page
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap');
+
+.profile-page * {
+    font-family: 'Sarabun', 'Prompt', sans-serif;
+}
+
+.setting-item:hover {
+    background: rgba(59, 130, 246, 0.04) !important;
+}
+
+.edit-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(30, 64, 175, 0.32) !important;
+}
+
+.cancel-btn:hover {
+    background: #f1f5f9 !important;
+}
+
+.save-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(30, 64, 175, 0.32) !important;
+}
+
+/* SweetAlert style on profile page (match requested design) */
+.profile-alert-popup {
+    border-radius: 24px !important;
+    padding: 28px 28px 24px !important;
+    max-width: 440px !important;
+}
+
+.profile-alert-icon {
+    margin-top: 4px !important;
+    margin-bottom: 14px !important;
+}
+
+.profile-alert-title {
+    font-size: 40px;
+    font-weight: 700 !important;
+    color: #111827 !important;
+    margin-bottom: 8px !important;
+}
+
+.profile-alert-text {
+    font-size: 27px;
+    color: #6b7280 !important;
+    margin: 0 auto 20px !important;
+}
+
+.profile-alert-confirm {
+    display: block;
+    width: 100%;
+    border: none;
+    border-radius: 14px;
+    padding: 13px 18px;
+    font-size: 20px;
+    font-weight: 700;
+    color: #fff;
+    background: #ef4444;
+    box-shadow: 0 8px 18px rgba(239, 68, 68, 0.34);
+    cursor: pointer;
+}
+
+.profile-alert-confirm:hover {
+    background: #dc2626;
+}

@@ -18,7 +18,7 @@ export default function Chat() {
 
   // ดึงข้อมูล User ปัจจุบัน
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem('user'));
+    const user = JSON.parse(sessionStorage.getItem('currentUser'));
     if (user) setCurrentUser(user);
   }, []);
 

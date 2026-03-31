@@ -1,0 +1,157 @@
+/* ============================================================
+   Login.css — Styles for Login & Register pages
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap');
+
+/* --- Background blobs --- */
+.login-blob-top-right {
+    position: fixed;
+    top: -180px;
+    right: -180px;
+    width: 600px;
+    height: 600px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(96,165,250,0.55) 0%, rgba(147,197,253,0.3) 50%, transparent 75%);
+    filter: blur(40px);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.login-blob-bottom-left {
+    position: fixed;
+    bottom: -180px;
+    left: -150px;
+    width: 650px;
+    height: 650px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(74,222,128,0.45) 0%, rgba(134,239,172,0.25) 50%, transparent 75%);
+    filter: blur(45px);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.login-blob-mid-right {
+    position: fixed;
+    top: 40%;
+    right: -80px;
+    width: 320px;
+    height: 320px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(147,197,253,0.4) 0%, transparent 70%);
+    filter: blur(30px);
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* --- Page wrapper --- */
+.login-page {
+    background: #f0f7ff;
+    min-height: 100vh;
+    position: relative;
+    overflow-x: hidden;
+}
+
+/* --- Auth container font --- */
+#auth-container * {
+    font-family: 'Sarabun', 'Prompt', sans-serif;
+}
+
+/* --- Card --- */
+#auth-container .card {
+    border-radius: 20px;
+    box-shadow: 0 8px 40px rgba(30,64,175,0.10), 0 1.5px 0 rgba(147,197,253,0.18);
+    border: 1px solid rgba(219,234,254,0.7);
+    padding: 1.8rem 2.2rem;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* --- Container override --- */
+#auth-container .container {
+    width: 100%;
+    max-width: 100%;
+    padding: 0;
+    margin: 0;
+}
+
+/* --- Input --- */
+#auth-container .input {
+    font-family: 'Sarabun', sans-serif;
+    font-size: 1rem;
+    border-radius: 12px;
+    border: 1.5px solid #e2e8f0;
+    padding: 0.6rem 1rem;
+    color: #1e293b;
+    background: #fafdff;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+#auth-container .input:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+    outline: none;
+    background: #fff;
+}
+
+#auth-container .input::placeholder {
+    color: #b0bec5;
+    font-size: 0.95rem;
+}
+
+#auth-container select.input {
+    cursor: pointer;
+}
+
+/* --- Label --- */
+#auth-container .input-group label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #475569;
+    letter-spacing: 0.02em;
+    margin-bottom: 4px;
+}
+
+#auth-container .input-group {
+    margin-bottom: 0.75rem;
+}
+
+/* --- Button --- */
+#auth-container .btn {
+    font-family: 'Sarabun', sans-serif;
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+    box-shadow: 0 4px 16px rgba(30,64,175,0.25);
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+
+#auth-container .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(30,64,175,0.32);
+}
+
+/* --- Auth link --- */
+#auth-container .auth-link {
+    color: #2563eb;
+    font-weight: 700;
+}
+
+#auth-container .auth-link:hover {
+    color: #1e40af;
+    text-decoration: underline;
+}
+
+/* --- Responsive --- */
+@media (max-width: 520px) {
+    #auth-container .card {
+        padding: 1.8rem 1.2rem !important;
+    }
+
+    #auth-container .step-2-content .input-group input,
+    #auth-container .step-2-content .input-group select {
+        font-size: 0.95rem;
+    }
+}

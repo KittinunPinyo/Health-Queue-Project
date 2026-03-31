@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { randomUUID } from 'crypto';
 
 // เข้ารหัสรหัสผ่านก่อนบันทึกลงฐานข้อมูล
 async function hashPassword(password) {
@@ -16,7 +17,13 @@ async function verifyPassword(password, hashed) {
 // สร้าง JWT หลัง login สำเร็จ
 function generateToken(user, jwtSecret) {
   return jwt.sign(
-    { id: user.id, email: user.email, role: user.role, name: user.name },
+    {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      name: user.name,
+      sid: randomUUID(),
+    },
     jwtSecret,
     { expiresIn: '24h' }
   );
@@ -34,7 +41,7 @@ function verifyToken(token, jwtSecret) {
 export { hashPassword };
 
 // สร้าง router ของกลุ่ม API ผู้ใช้ (register/login/profile/logout)
-export function createUserRouter({ dbGet, dbInsert, jwtSecret }) {
+export function createUserRouter({ dbGet, dbInsert, dbRun, jwtSecret }) {
   const router = Router();
 
   // middleware ตรวจ token สำหรับ endpoint ที่ต้องล็อกอิน
@@ -60,6 +67,7 @@ export function createUserRouter({ dbGet, dbInsert, jwtSecret }) {
       name,
       email,
       password,
+      phone,
       idCard,
       dateOfBirth,
       age,
@@ -79,13 +87,13 @@ export function createUserRouter({ dbGet, dbInsert, jwtSecret }) {
     const hashedPassword = await hashPassword(password);
 
     const result = await dbInsert(
-      `INSERT INTO users (name, email, password, id_card, date_of_birth, age, gender, height, weight, medical_conditions, allergies, role)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'patient')`,
-      [name, email, hashedPassword, idCard, dateOfBirth, age, gender, height, weight, medicalConditions, allergies]
+      `INSERT INTO users (name, email, password, phone, id_card, date_of_birth, age, gender, height, weight, medical_conditions, allergies, role)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'patient')`,
+      [name, email, hashedPassword, phone || null, idCard, dateOfBirth, age, gender, height, weight, medicalConditions, allergies]
     );
 
     return dbGet(
-      'SELECT id, name, email, role, id_card, date_of_birth, age, gender, height, weight, medical_conditions, allergies FROM users WHERE id = ?',
+      'SELECT id, name, email, phone, role, id_card, date_of_birth, age, gender, height, weight, medical_conditions, allergies FROM users WHERE id = ?',
       [result.lastID]
     );
   };
@@ -104,9 +112,108 @@ export function createUserRouter({ dbGet, dbInsert, jwtSecret }) {
 
   const getUserById = async (id) => {
     return dbGet(
-      'SELECT id, name, email, role, id_card, date_of_birth, age, gender, height, weight, medical_conditions, allergies FROM users WHERE id = ?',
+      'SELECT id, name, email, phone, role, id_card, date_of_birth, age, gender, height, weight, medical_conditions, allergies FROM users WHERE id = ?',
       [id]
     );
+  };
+
+  const updateUserProfile = async (id, payload) => {
+    const existing = await dbGet('SELECT * FROM users WHERE id = ?', [id]);
+    if (!existing) {
+      throw new Error('User not found');
+    }
+
+    const toNullableString = (value, fallback = null) => {
+      if (value === undefined) return fallback;
+      if (value === null) return null;
+      const str = String(value).trim();
+      return str === '' ? null : str;
+    };
+
+    const toNullableNumber = (value, fallback = null) => {
+      if (value === undefined) return fallback;
+      if (value === null || value === '') return null;
+      const num = Number(value);
+      return Number.isFinite(num) ? num : fallback;
+    };
+
+    const nextName = toNullableString(payload.name, existing.name);
+    if (!nextName) {
+      throw new Error('Name is required');
+    }
+
+    const nextPhone = toNullableString(payload.phone, existing.phone);
+    const nextIdCard = toNullableString(payload.idCard, existing.id_card);
+    const nextDob = toNullableString(payload.dateOfBirth, existing.date_of_birth);
+    const nextAge = toNullableNumber(payload.age, existing.age);
+    const nextGender = toNullableString(payload.gender, existing.gender);
+    const nextHeight = toNullableNumber(payload.height, existing.height);
+    const nextWeight = toNullableNumber(payload.weight, existing.weight);
+    const nextConditions = toNullableString(payload.medicalConditions, existing.medical_conditions);
+    const nextAllergies = toNullableString(payload.allergies, existing.allergies);
+
+    await dbRun(
+      `UPDATE users
+       SET name = ?,
+           phone = ?,
+           id_card = ?,
+           date_of_birth = ?,
+           age = ?,
+           gender = ?,
+           height = ?,
+           weight = ?,
+           medical_conditions = ?,
+           allergies = ?,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = ?`,
+      [
+        nextName,
+        nextPhone,
+        nextIdCard,
+        nextDob,
+        nextAge,
+        nextGender,
+        nextHeight,
+        nextWeight,
+        nextConditions,
+        nextAllergies,
+        id,
+      ]
+    );
+
+    return getUserById(id);
+  };
+
+  const changeUserPassword = async (id, currentPassword, newPassword) => {
+    if (!currentPassword || !newPassword) {
+      throw new Error('Current and new password are required');
+    }
+
+    if (newPassword.length < 8) {
+      throw new Error('New password must be at least 8 characters');
+    }
+
+    const user = await dbGet('SELECT id, password FROM users WHERE id = ?', [id]);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    const validCurrent = await verifyPassword(currentPassword, user.password);
+    if (!validCurrent) {
+      throw new Error('Current password is incorrect');
+    }
+
+    const nextHashed = await hashPassword(newPassword);
+    await dbRun(
+      'UPDATE users SET password = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+      [nextHashed, id]
+    );
+  };
+
+  const deleteUserAccount = async (id) => {
+    // ลบข้อมูลนัดหมายที่ผูกกับผู้ใช้ก่อน เพื่อไม่ชน foreign key
+    await dbRun('DELETE FROM appointments WHERE user_id = ?', [id]);
+    await dbRun('DELETE FROM users WHERE id = ?', [id]);
   };
 
   // สมัครสมาชิกผู้ใช้ใหม่
@@ -148,6 +255,41 @@ export function createUserRouter({ dbGet, dbInsert, jwtSecret }) {
   // endpoint ออกจากระบบ (ฝั่งนี้ตอบสถานะสำเร็จ)
   router.post('/logout', (req, res) => {
     res.json({ message: 'Logged out successfully' });
+  });
+
+  // แก้ไขชื่อ/เบอร์โทรของผู้ใช้ที่ล็อกอินอยู่
+  router.put('/profile', authenticateToken, async (req, res) => {
+    try {
+      const user = await updateUserProfile(req.user.id, req.body || {});
+      if (!user) return res.status(404).json({ error: 'User not found' });
+      return res.json({ message: 'Profile updated successfully', user });
+    } catch (error) {
+      console.error('Update profile error:', error);
+      return res.status(400).json({ error: error.message });
+    }
+  });
+
+  // เปลี่ยนรหัสผ่าน (ใช้ bcrypt)
+  router.put('/password', authenticateToken, async (req, res) => {
+    try {
+      const { currentPassword, newPassword } = req.body || {};
+      await changeUserPassword(req.user.id, currentPassword, newPassword);
+      return res.json({ message: 'Password updated successfully' });
+    } catch (error) {
+      console.error('Change password error:', error);
+      return res.status(400).json({ error: error.message });
+    }
+  });
+
+  // ลบบัญชีผู้ใช้ที่ล็อกอินอยู่
+  router.delete('/account', authenticateToken, async (req, res) => {
+    try {
+      await deleteUserAccount(req.user.id);
+      return res.json({ message: 'Account deleted successfully' });
+    } catch (error) {
+      console.error('Delete account error:', error);
+      return res.status(500).json({ error: 'Failed to delete account' });
+    }
   });
 
   return router;

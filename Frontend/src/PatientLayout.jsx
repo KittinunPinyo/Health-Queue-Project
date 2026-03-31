@@ -18,7 +18,7 @@ const getHeaderProps = (pathname, t) => {
 
 function updateNotificationBadge() {
     try {
-        const currentUser = JSON.parse(localStorage.getItem('user'));
+        const currentUser = JSON.parse(sessionStorage.getItem('currentUser'));
         if (!currentUser || currentUser.role === 'admin') return; 
 
         const notifications = JSON.parse(localStorage.getItem('notifications')) || []; 
@@ -52,15 +52,12 @@ function PatientLayout() {
     }, [location.pathname]);
 
     return (
-        // ใช้ class "page-container" จาก FooterLayout.css เพื่อทำ Flexbox แนวตั้ง
-        <div className="page-container">
+        <div className="page-container" style={{ background: '#f0f7ff' }}>
             
             <Header title={headerProps.title} onBack={onBackClick} />
 
-            {/* ใช้ class "content-wrap" ครอบ Outlet เพื่อให้ส่วนนี้ขยายเต็มพื้นที่ว่าง 
-                paddingTop: '72px' ใส่ที่นี่เพื่อให้เนื้อหาไม่โดน Header บัง
-            */}
-            <div className="content-wrap" style={{ paddingTop: '72px', paddingBottom: '88px' }}>
+            {/* content-wrap ไม่มี padding — แต่ละหน้าจัดการ offset เอง */}
+            <div className="content-wrap">
                 <Outlet />
             </div>
             {/* Footer อยู่นอก content-wrap จะถูกดันไปล่างสุดเสมอ */}

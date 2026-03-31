@@ -115,7 +115,7 @@ function SearchResults() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f7f9fc' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: '#f7f9fc', paddingTop: '72px', paddingBottom: '88px' }}>
       <div style={{ maxWidth: '1180px', margin: '0 auto', padding: '30px 20px 60px' }}>
         <button onClick={() => navigate(-1)} style={{ marginBottom: '20px', padding: '10px 14px', border: '1px solid #d2d6dc', borderRadius: '10px', backgroundColor: '#fff', color: '#1f2937', cursor: 'pointer', fontWeight: '600', boxShadow: '0 3px 10px rgba(15, 23, 42, 0.08)' }}>{t('back')}</button>
 

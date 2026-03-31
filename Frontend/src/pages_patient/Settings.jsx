@@ -54,7 +54,7 @@ const Settings = () => {
   };
 
   return (
-    <div style={{ maxWidth: "500px", margin: "50px auto" }}>
+    <div style={{ maxWidth: "500px", margin: "0 auto", paddingTop: '92px', paddingBottom: '108px' }}>
       <h2 style={{ marginBottom: "20px" }}>Profile Settings</h2>
       <form onSubmit={handleSubmit}>
         <div style={{ marginBottom: "15px" }}>

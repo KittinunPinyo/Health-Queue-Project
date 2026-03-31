@@ -261,7 +261,7 @@ function MyAppointments() {
     return (
         <>
             {/* (Layout จะใส่ Header ให้) */}
-            <div id="page-myappointments" className="page active">
+            <div id="page-myappointments" className="page active" style={{ paddingTop: '72px', paddingBottom: '88px' }}>
                 <main className="container" id="appointments-list">
                     {!backendAvailable && (
                         <div style={{

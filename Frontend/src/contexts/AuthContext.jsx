@@ -14,17 +14,16 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [token, setToken] = useState(localStorage.getItem('token'));
+  const [token, setToken] = useState(sessionStorage.getItem('token'));
 
   const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim();
 
   const clearStoredSession = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
     localStorage.removeItem('users');
     localStorage.removeItem('selectedClinicId');
     localStorage.removeItem('selectedDoctorId');
     localStorage.removeItem('selectedDoctorData');
+    sessionStorage.removeItem('token');
     sessionStorage.removeItem('currentUser');
     sessionStorage.removeItem('users');
     delete axios.defaults.headers.common['Authorization'];
@@ -35,12 +34,10 @@ export const AuthProvider = ({ children }) => {
 
   const persistCurrentUser = (nextUser) => {
     if (nextUser) {
-      localStorage.setItem('user', JSON.stringify(nextUser));
       sessionStorage.setItem('currentUser', JSON.stringify(nextUser));
       return;
     }
 
-    localStorage.removeItem('user');
     sessionStorage.removeItem('currentUser');
   };
 
@@ -56,8 +53,8 @@ export const AuthProvider = ({ children }) => {
   // Check if user is logged in on app start
   useEffect(() => {
     const checkAuth = async () => {
-      const storedToken = localStorage.getItem('token');
-      const storedUser = localStorage.getItem('user');
+      const storedToken = sessionStorage.getItem('token');
+      const storedUser = sessionStorage.getItem('currentUser');
 
       if (storedToken && storedUser) {
         try {
@@ -103,7 +100,7 @@ export const AuthProvider = ({ children }) => {
       const { token } = response.data;
 
       setToken(token);
-      localStorage.setItem('token', token);
+      sessionStorage.setItem('token', token);
 
       // Immediately set Authorization header so profile fetch works right away
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
@@ -177,6 +174,39 @@ export const AuthProvider = ({ children }) => {
     clearStoredSession();
   };
 
+  const changePassword = async (currentPassword, newPassword) => {
+    try {
+      await axios.put('/api/user/password', { currentPassword, newPassword });
+      return { success: true };
+    } catch (error) {
+      const fallbackMessage = !error.response
+        ? 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ กรุณาลองใหม่'
+        : 'Password update failed';
+      return {
+        success: false,
+        error: error.response?.data?.error || fallbackMessage,
+      };
+    }
+  };
+
+  const deleteAccount = async () => {
+    try {
+      await axios.delete('/api/user/account');
+      setUser(null);
+      setToken(null);
+      clearStoredSession();
+      return { success: true };
+    } catch (error) {
+      const fallbackMessage = !error.response
+        ? 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ กรุณาลองใหม่'
+        : 'Delete account failed';
+      return {
+        success: false,
+        error: error.response?.data?.error || fallbackMessage,
+      };
+    }
+  };
+
   const value = {
     user,
     token,
@@ -185,6 +215,8 @@ export const AuthProvider = ({ children }) => {
     register,
     logout,
     updateUser,
+    changePassword,
+    deleteAccount,
     isAuthenticated: !!user,
     isAdmin: (user?.role || '').toLowerCase() === 'admin',
     isPatient: (user?.role || '').toLowerCase() === 'patient'

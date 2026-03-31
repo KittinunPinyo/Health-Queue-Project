@@ -1,161 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { useLanguage } from '../contexts/LanguageContext.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
-
-// --- CSS Styles (รวม CSS ทั้งหมด) ---
-const styles = `
-    body {
-        font-family: 'Prompt', sans-serif;
-        margin: 0;
-        padding: 0;
-        background-color: #ffffff;
-        overflow-x: hidden;
-    }
-
-    /* --- Background Curve Styles (ส่วนโค้งพื้นหลัง) --- */
-    .bg-curve-container {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        z-index: 0;
-        overflow: hidden;
-        pointer-events: none;
-    }
-
-    .curve-shape {
-        position: absolute;
-        top: 50%;
-        left: -10%;
-        width: 120%;
-        height: 60%;
-        background: #f4f9ff; /* สีฟ้าอ่อนมาก */
-        border-top-left-radius: 50% 150px;
-        border-top-right-radius: 50% 150px;
-        transform: rotate(-2deg);
-        z-index: -1;
-    }
-
-    /* Card Styles */
-    .card-clinic {
-        cursor: pointer;
-        border: 1px solid #f0f0f0;
-        border-radius: 20px;
-        overflow: hidden;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.05);
-        transition: all 0.3s ease;
-        background: #fff;
-    }
-    .card-clinic:hover {
-        transform: translateY(-8px);
-        box-shadow: 0 20px 40px rgba(59, 130, 246, 0.15);
-        border-color: #bfdbfe;
-    }
-
-    /* Department Grid */
-    .department-section {
-        margin-bottom: 40px;
-        padding: 30px;
-        background: #fff;
-        border-radius: 24px;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.02);
-        border: 1px solid #f0f0f0;
-        position: relative;
-        z-index: 2;
-    }
-
-    /* Tabs */
-    .location-tabs {
-        display: flex;
-        gap: 10px;
-        margin-bottom: 30px;
-        flex-wrap: wrap;
-        justify-content: center;
-    }
-
-    .tab-button {
-        padding: 10px 24px;
-        border: 1px solid #edf2f7;
-        background-color: #fff;
-        border-radius: 30px;
-        cursor: pointer;
-        font-size: 14px;
-        color: #718096;
-        transition: all 0.3s;
-        font-weight: 500;
-    }
-
-    .tab-button.active {
-        border-color: #3b82f6;
-        background-color: #eff6ff;
-        color: #1e40af;
-        font-weight: 600;
-        box-shadow: 0 4px 6px rgba(59, 130, 246, 0.1);
-    }
-
-    .tab-button:hover:not(.active) {
-        background-color: #f7fafc;
-        color: #4a5568;
-    }
-
-    /* Grid & Icons */
-    .department-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-        gap: 24px;
-        justify-content: center;
-    }
-
-    .department-card {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        text-align: center;
-        cursor: pointer;
-        transition: transform 0.2s ease;
-    }
-
-    .department-card:hover {
-        transform: translateY(-5px);
-    }
-
-    .icon-circle {
-        width: 70px;
-        height: 70px;
-        border-radius: 24px;
-        background: linear-gradient(135deg, #ffffff 0%, #f0f7ff 100%);
-        border: 1px solid #e0f2fe;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-bottom: 12px;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03);
-        transition: all 0.3s ease;
-    }
-
-    .department-card:hover .icon-circle {
-        border-color: #3b82f6;
-        background: #fff;
-        box-shadow: 0 8px 20px rgba(59, 130, 246, 0.15);
-        transform: scale(1.05);
-    }
-
-    .dept-emoji { font-size: 32px; }
-    .dept-img { width: 55%; height: 55%; object-fit: contain; }
-    .dept-name { font-size: 13px; color: #4b5563; font-weight: 500; line-height: 1.4; }
-    
-    /* Animation for Slider */
-    @keyframes fade-in {
-        from { opacity: 0.5; }
-        to { opacity: 1; }
-    }
-    .slide-image {
-        animation: fade-in 0.5s ease-in-out;
-    }
-`;
+import './Home.css';
 
 // --- Configuration Data ---
 const DEPARTMENT_ICONS = {
@@ -195,6 +43,7 @@ function Home() {
     const [departments, setDepartments] = useState([]);
     const [locations, setLocations] = useState([t('all')]); 
     const [activeLocation, setActiveLocation] = useState(t('all'));
+    const [activeDeptTab, setActiveDeptTab] = useState(t('all'));
     const [allDoctors, setAllDoctors] = useState([]);
     const [showAllDoctors, setShowAllDoctors] = useState(false);
     const [selectedDoctor, setSelectedDoctor] = useState(null);
@@ -305,6 +154,17 @@ function Home() {
         document.getElementById('clinic-results')?.scrollIntoView({ behavior: 'smooth' });
     };
 
+    // --- Filtered departments based on selected tab ---
+    const filteredDepartments = useMemo(() => {
+        if (activeDeptTab === t('all')) return departments;
+        const specialtiesInTab = new Set(
+            allDoctors
+                .filter(doc => doc.clinicName === activeDeptTab)
+                .map(doc => doc.specialty)
+        );
+        return departments.filter(dept => specialtiesInTab.has(dept.name));
+    }, [activeDeptTab, departments, allDoctors, t]);
+
     const handleSearch = () => {
         const query = searchInput.trim();
         if (!query) return;
@@ -331,9 +191,30 @@ function Home() {
     const displayedDoctors = showAllDoctors ? allDoctors : allDoctors.slice(0, 8);
 
     return (
-        <div style={{position: 'relative', minHeight: '100vh', backgroundColor: '#ffffff'}}>
-            <style>{styles}</style>
-            
+        <div style={{position: 'relative', minHeight: '100vh', background: '#f0f7ff', paddingTop: '72px', paddingBottom: '88px'}}>
+              {/* ── Decorative background blobs ── */}
+            {/* บน-ขวา : ฟ้าใหญ่ */}
+            <div style={{
+                position:'fixed', top:'-180px', right:'-180px',
+                width:'620px', height:'620px', borderRadius:'50%',
+                background:'radial-gradient(circle, rgba(96,165,250,0.5) 0%, rgba(147,197,253,0.28) 50%, transparent 75%)',
+                filter:'blur(45px)', pointerEvents:'none', zIndex:0
+            }} />
+            {/* ล่าง-ซ้าย : เขียวใหญ่ */}
+            <div style={{
+                position:'fixed', bottom:'-180px', left:'-150px',
+                width:'680px', height:'680px', borderRadius:'50%',
+                background:'radial-gradient(circle, rgba(74,222,128,0.42) 0%, rgba(134,239,172,0.22) 50%, transparent 75%)',
+                filter:'blur(50px)', pointerEvents:'none', zIndex:0
+            }} />
+            {/* กลาง-ขวา : ฟ้าเล็ก */}
+            <div style={{
+                position:'fixed', top:'42%', right:'-80px',
+                width:'340px', height:'340px', borderRadius:'50%',
+                background:'radial-gradient(circle, rgba(147,197,253,0.38) 0%, transparent 70%)',
+                filter:'blur(32px)', pointerEvents:'none', zIndex:0
+            }} />
+
             {/* --- Background Decoration (ส่วนโค้งพื้นหลัง) --- */}
             <div className="bg-curve-container">
                 <div className="curve-shape"></div>
@@ -345,7 +226,7 @@ function Home() {
                     {/* Modal */}
                     {showDoctorModal && selectedDoctor && (
                         <div style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.6)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)'}}>
-                            <div style={{backgroundColor: 'white', borderRadius: '24px', padding: '0', maxWidth: '500px', width: '95%', maxHeight: '90vh', overflowY: 'auto', position: 'relative', boxShadow: '0 25px 80px rgba(0,0,0,0.3)'}}>
+                            <div className="home-card-font" style={{backgroundColor: 'white', borderRadius: '24px', padding: '0', maxWidth: '500px', width: '95%', maxHeight: '90vh', overflowY: 'auto', position: 'relative', boxShadow: '0 25px 80px rgba(0,0,0,0.3)'}}>
                                 <div style={{background: 'linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)', padding: '2rem', borderRadius: '24px 24px 0 0', textAlign: 'center', position: 'relative'}}>
                                     <button onClick={() => setShowDoctorModal(false)} style={{position: 'absolute', top: '1rem', right: '1rem', backgroundColor: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '50%', width: '36px', height: '36px', cursor: 'pointer', color: 'white', fontSize: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>×</button>
                                     <div style={{width: '120px', height: '120px', borderRadius: '50%', background: 'linear-gradient(135deg, #dbeafe 0%, #e0e7ff 100%)', margin: '0 auto 1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '4px solid white', overflow: 'hidden', boxShadow: '0 8px 20px rgba(0,0,0,0.2)'}}>
@@ -440,7 +321,8 @@ function Home() {
                               {icon:'🔔',title:'รับแจ้งเตือน',desc:'อัพเดทสถานะนัดทันที'},
                               {icon:'📋',title:'ดูประวัตินัด',desc:'ตรวจสอบย้อนหลังได้'},
                             ].map((f,i) => (
-                              <div key={i}
+                                                            <div key={i}
+                                                                className="home-card-font"
                                 onMouseEnter={e => e.currentTarget.style.transform='translateY(-4px)'}
                                 onMouseLeave={e => e.currentTarget.style.transform='translateY(0)'}
                                 style={{background:'rgba(255,255,255,0.05)',borderRadius:'18px',padding:'24px 16px',border:'1px solid rgba(255,255,255,0.08)',backdropFilter:'blur(8px)',textAlign:'center',transition:'transform 0.2s ease'}}>
@@ -457,26 +339,128 @@ function Home() {
                     {/* 1. Hero Section (Slider + Search) */}
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '40px', alignItems: 'center', marginBottom: '50px', marginTop: '30px' }}>
                         <div style={{ flex: '1 1 400px' }}>
-                            <h1 style={{ fontSize: '36px', color: '#111827', marginBottom: '25px', lineHeight: '1.2', fontWeight: '700' }}>{t('bookOnline')}</h1>
-                            <div style={{ backgroundColor: '#eef6ff', padding: '30px', borderRadius: '24px', boxShadow: '0 10px 25px rgba(59, 130, 246, 0.1)' }}>
+                            {/* Hero Heading */}
+                            <div style={{ marginBottom: '28px' }}>
+                                <div style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: '7px',
+                                    background: 'linear-gradient(135deg, rgba(219,234,254,0.9) 0%, rgba(224,242,254,0.85) 100%)',
+                                    border: '1px solid rgba(147,197,253,0.5)',
+                                    borderRadius: '999px',
+                                    padding: '5px 14px',
+                                    marginBottom: '14px'
+                                }}>
+                                    <span style={{ fontSize: '14px' }}>🩺</span>
+                                    <span style={{ fontSize: '12px', fontWeight: '700', color: '#1e40af', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Health Queue</span>
+                                </div>
+                                <h1 style={{ margin: 0, lineHeight: '1.2', fontFamily: "'Sarabun', 'Prompt', sans-serif" }}>
+                                    <span style={{
+                                        display: 'block',
+                                        fontSize: 'clamp(28px, 4vw, 40px)',
+                                        fontWeight: '800',
+                                        color: '#0f172a',
+                                        letterSpacing: '-0.02em',
+                                        marginBottom: '4px'
+                                    }}>
+                                        นัดหมอ <span style={{
+                                            background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                                            WebkitBackgroundClip: 'text',
+                                            WebkitTextFillColor: 'transparent',
+                                            backgroundClip: 'text'
+                                        }}>ออนไลน์</span>
+                                    </span>
+                                    <span style={{
+                                        display: 'block',
+                                        fontSize: 'clamp(20px, 3vw, 28px)',
+                                        fontWeight: '600',
+                                        color: '#475569',
+                                        letterSpacing: '-0.01em'
+                                    }}>
+                                        ไม่ต้องรอนาน ✨
+                                    </span>
+                                </h1>
+                            </div>
+                            <div
+                                className="home-card-font"
+                                style={{
+                                    background: 'linear-gradient(145deg, #ffffff 0%, #edf4ff 100%)',
+                                    padding: '30px',
+                                    borderRadius: '24px',
+                                    border: '1px solid rgba(59,130,246,0.2)',
+                                    boxShadow: '0 14px 34px rgba(30,64,175,0.14), inset 0 1px 0 rgba(255,255,255,0.85)'
+                                }}
+                            >
                                 <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
-                                    <div style={{ flex: 1, position: 'relative', display: 'flex', alignItems: 'center', backgroundColor: 'white', borderRadius: '16px', overflow: 'hidden', border: '1px solid #e5e7eb' }}>
+                                    <div style={{ flex: 1, position: 'relative', display: 'flex', alignItems: 'center', backgroundColor: '#ffffff', borderRadius: '16px', overflow: 'hidden', border: '1.5px solid #c7d2fe', boxShadow: '0 4px 14px rgba(59,130,246,0.08)' }}>
                                         <div style={{ paddingLeft: '15px', display: 'flex' }}><SearchIcon /></div>
-                                        <input type="text" placeholder={t('searchPlaceholder')} value={searchInput} onChange={(e) => setSearchInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSearch()} style={{ width: '100%', padding: '14px 15px', border: 'none', outline: 'none', fontSize: '16px', color: '#374151' }} />
+                                        <input type="text" placeholder={t('searchPlaceholder')} value={searchInput} onChange={(e) => setSearchInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSearch()} style={{ width: '100%', padding: '14px 15px', border: 'none', outline: 'none', fontSize: '16px', color: '#1f2937', background: 'transparent' }} />
                                     </div>
                                     <button onClick={handleSearch} style={{ backgroundColor: '#1e40af', color: 'white', border: 'none', borderRadius: '16px', padding: '0 30px', fontSize: '16px', cursor: 'pointer', fontWeight: '600', boxShadow: '0 4px 12px rgba(30, 64, 175, 0.3)', transition: 'all 0.2s' }}>{t('search')}</button>
                                 </div>
-                                <p style={{ fontSize: '14px', color: '#6b7280', lineHeight: '1.6', margin: 0 }}>{t('searchHint')}</p>
+                                <p style={{ fontSize: '14px', color: '#475569', lineHeight: '1.6', margin: 0, fontWeight: '500' }}>{t('searchHint')}</p>
                             </div>
                         </div>
                         <div style={{ flex: '1 1 400px', display: 'flex', justifyContent: 'center' }}>
-                            <div style={{ width: '100%', maxWidth: '500px', height: '320px', borderRadius: '24px', boxShadow: '0 20px 50px rgba(0,0,0,0.1)', position: 'relative', overflow: 'hidden', border: '8px solid #ffffff' }}>
+                            {/* Slider wrapper — glass border + layered shadow */}
+                            <div style={{
+                                width: '100%',
+                                maxWidth: '520px',
+                                height: '320px',
+                                borderRadius: '28px',
+                                position: 'relative',
+                                overflow: 'hidden',
+                                border: '1.5px solid rgba(147,197,253,0.55)',
+                                boxShadow: '0 28px 60px rgba(30,64,175,0.18), 0 8px 20px rgba(0,0,0,0.10), inset 0 1px 0 rgba(255,255,255,0.45)',
+                                background: '#e8f1ff'
+                            }}>
+                                {/* Slides */}
                                 {HERO_IMAGES.map((imgUrl, index) => (
-                                    <img key={index} src={imgUrl} alt={`Hero Slide ${index + 1}`} className="slide-image" style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', top: 0, left: 0, opacity: currentImageIndex === index ? 1 : 0, transition: 'opacity 1s ease-in-out' }} />
+                                    <img
+                                        key={index}
+                                        src={imgUrl}
+                                        alt={`Hero Slide ${index + 1}`}
+                                        className="slide-image"
+                                        style={{
+                                            width: '100%', height: '100%', objectFit: 'cover',
+                                            position: 'absolute', top: 0, left: 0,
+                                            opacity: currentImageIndex === index ? 1 : 0,
+                                            transition: 'opacity 1s ease-in-out'
+                                        }}
+                                    />
                                 ))}
-                                <div style={{ position: 'absolute', bottom: '20px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '8px', zIndex: 10 }}>
+
+                                {/* Bottom gradient overlay */}
+                                <div style={{
+                                    position: 'absolute', bottom: 0, left: 0, right: 0,
+                                    height: '80px',
+                                    background: 'linear-gradient(to top, rgba(15,23,42,0.55) 0%, transparent 100%)',
+                                    pointerEvents: 'none',
+                                    zIndex: 5
+                                }} />
+
+                                {/* Dot indicators */}
+                                <div style={{
+                                    position: 'absolute', bottom: '18px', left: '50%',
+                                    transform: 'translateX(-50%)',
+                                    display: 'flex', gap: '7px', zIndex: 10,
+                                    background: 'rgba(0,0,0,0.22)',
+                                    backdropFilter: 'blur(6px)',
+                                    borderRadius: '999px',
+                                    padding: '5px 10px'
+                                }}>
                                     {HERO_IMAGES.map((_, index) => (
-                                        <div key={index} onClick={() => setCurrentImageIndex(index)} style={{ width: currentImageIndex === index ? '24px' : '8px', height: '8px', borderRadius: '4px', backgroundColor: currentImageIndex === index ? 'white' : 'rgba(255,255,255,0.5)', cursor: 'pointer', transition: 'all 0.3s' }} />
+                                        <div
+                                            key={index}
+                                            onClick={() => setCurrentImageIndex(index)}
+                                            style={{
+                                                width: currentImageIndex === index ? '22px' : '7px',
+                                                height: '7px',
+                                                borderRadius: '4px',
+                                                backgroundColor: currentImageIndex === index ? '#ffffff' : 'rgba(255,255,255,0.45)',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.35s ease',
+                                                boxShadow: currentImageIndex === index ? '0 0 6px rgba(255,255,255,0.7)' : 'none'
+                                            }}
+                                        />
                                     ))}
                                 </div>
                             </div>
@@ -522,7 +506,7 @@ function Home() {
 
                     {/* 3. Clinic List */}
                     <>
-                    <div id="clinic-results" style={{ marginBottom: '30px' }}>
+                    <div id="clinic-results" className="hospital-header" style={{ marginBottom: '30px' }}>
                         <h2 style={{ fontSize: '26px', color: '#111827', fontWeight: '700', marginBottom: '8px' }}>{t('welcomeMessage')}, <span style={{color: '#3b82f6'}}>{welcomeName}</span></h2>
                         <p style={{ color: '#6b7280' }}>{activeLocation !== t('all') ? `${t('selectedHospital')}: ${activeLocation}` : t('selectHospital')}</p>
                     </div>
@@ -535,15 +519,15 @@ function Home() {
                             </div>
                         ) : (
                             filteredClinics.map(c => (
-                                <div key={c.id} className="card-clinic" onClick={() => handleSelectClinic(c.id)} style={{border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.05)'}}>
-                                    <div style={{ overflow: 'hidden', height: '220px', position: 'relative' }}>
+                                <div key={c.id} className="card-clinic hospital-card" onClick={() => handleSelectClinic(c.id)}>
+                                    <div className="hospital-card-image-wrap" style={{ overflow: 'hidden', height: '220px', position: 'relative' }}>
                                         <img src={c.image} alt={c.name} onError={(e) => e.target.src='https://placehold.co/600x400/eeeeee/cccccc?text=No+Image'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                         <div style={{position: 'absolute', bottom: 0, left: 0, width: '100%', background: 'linear-gradient(to top, rgba(0,0,0,0.6), transparent)', padding: '20px', boxSizing: 'border-box'}}>
                                             <h3 style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: 'white', textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>{c.name}</h3>
                                         </div>
                                     </div>
-                                    <div style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#3b82f6', fontWeight: '500' }}>
+                                    <div className="hospital-card-footer" style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <div className="hospital-doctor-badge" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#3b82f6', fontWeight: '500' }}>
                                             <span>👨‍⚕️</span> <span style={{ fontSize: '14px' }}>{c.doctors?.length || 0} {t('allDoctors')}</span>
                                         </div>
                                     </div>
@@ -555,7 +539,7 @@ function Home() {
 
                     {/* ──── Mid-page Login CTA (guest) ──── */}
                     {!isAuthenticated && (
-                      <div style={{
+                                            <div className="home-card-font" style={{
                         position:'relative', overflow:'hidden',
                         background:'linear-gradient(135deg,#1e40af 0%,#4f46e5 100%)',
                         borderRadius:'24px', padding:'48px 32px',
@@ -589,16 +573,16 @@ function Home() {
 
                     {/* 5. Departments */}
                     <div className="department-section">
-                        <h2 style={{ fontSize: '24px', color: '#1f2937', marginBottom: '24px', fontWeight: '700', textAlign: 'center' }}>{t('departmentsAndHospitals')}</h2>
+                        <h2 className="department-title" style={{ fontSize: '24px', color: '#1f2937', marginBottom: '24px', fontWeight: '700', textAlign: 'center' }}>{t('departmentsAndHospitals')}</h2>
                         <div className="location-tabs">
                             {locations.map((loc) => (
-                                <button key={loc} className={`tab-button ${activeLocation === loc ? 'active' : ''}`} onClick={() => setActiveLocation(loc)}>
+                                <button key={loc} className={`tab-button ${activeDeptTab === loc ? 'active' : ''}`} onClick={() => setActiveDeptTab(loc)}>
                                     {loc}
                                 </button>
                             ))}
                         </div>
                         <div className="department-grid">
-                            {departments.map((dept) => (
+                            {filteredDepartments.map((dept) => (
                                 <div key={dept.id} className="department-card" onClick={() => handleSelectDepartment(dept.name)}>
                                     <div className="icon-circle">
                                         {dept.icon.includes('http') || dept.icon.includes('data:image') ? <img src={dept.icon} alt={dept.name} className="dept-img" /> : <span className="dept-emoji">{dept.icon}</span>}

@@ -160,19 +160,29 @@ function Header({ title, logoSrc = '/public/healthqueue.png', onBack }) {
                 {`
                     :root {
                         --header-h: 4.5rem;
-                        --primary: #007bff;
+                        --primary: #1e40af;
+                        --primary-light: #3b82f6;
                     }
 
                     .modern-header {
                         position: fixed;
                         top: 0; left: 0; right: 0;
                         height: var(--header-h);
-                        background: #ffffff;
+                        background: linear-gradient(135deg,
+                            rgba(255,255,255,0.82) 0%,
+                            rgba(239,246,255,0.78) 60%,
+                            rgba(219,234,254,0.72) 100%
+                        );
+                        backdrop-filter: blur(20px) saturate(1.6);
+                        -webkit-backdrop-filter: blur(20px) saturate(1.6);
                         display: flex;
                         align-items: center;
-                        justify-content: space-between; /* แยกซ้ายขวาออกจากกัน */
-                        padding: 0 3%; /* ระยะห่างจากขอบจอซ้ายขวา */
-                        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+                        justify-content: space-between;
+                        padding: 0 3%;
+                        box-shadow:
+                            0 1px 0 rgba(59,130,246,0.14),
+                            0 4px 24px rgba(30,64,175,0.07);
+                        border-bottom: 1.5px solid rgba(147,197,253,0.35);
                         z-index: 1000;
                     }
 
@@ -180,24 +190,24 @@ function Header({ title, logoSrc = '/public/healthqueue.png', onBack }) {
                     .header-left {
                         display: flex;
                         align-items: center;
-                        z-index: 2; /* อยู่ชั้นบนเพื่อให้กดได้ */
+                        z-index: 2;
                     }
                     .header-logo {
-                        height: 7rem; /* ปรับความสูงโลโก้ */
+                        height: 7rem;
                         width: auto;
                     }
 
                     /* --- Title (Center) --- */
                     .header-title {
-                        position: absolute; /* ✨ Key Fix: ลอยอยู่ตรงกลางเสมอ */
+                        position: absolute;
                         left: 50%;
                         top: 50%;
                         transform: translate(-50%, -50%);
                         font-size: 1.1rem;
                         font-weight: 700;
-                        color: #333;
+                        color: #1e3a5f;
                         white-space: nowrap;
-                        pointer-events: none; /* ไม่ให้บังการคลิก */
+                        pointer-events: none;
                     }
 
                     /* --- Nav (Right) --- */
@@ -210,35 +220,34 @@ function Header({ title, logoSrc = '/public/healthqueue.png', onBack }) {
 
                     .nav-link {
                         display: flex;
-                        flex-direction: row; /* ✨ Key Fix: บังคับแนวนอน */
+                        flex-direction: row;
                         align-items: center;
                         gap: 8px;
                         padding: 0.6rem 1rem;
-                        border-radius: 30px; /* ทรงแคปซูลแบบรูปที่ 2 */
+                        border-radius: 30px;
                         text-decoration: none;
-                        color: #64748b;
+                        color: #475569;
                         font-size: 0.95rem;
                         font-weight: 500;
-                        white-space: nowrap; /* ✨ Key Fix: ห้ามตัดบรรทัด */
+                        white-space: nowrap;
                         transition: all 0.2s ease;
                     }
 
                     .nav-link:hover {
-                        background-color: #f8fafc;
+                        background-color: rgba(96,165,250,0.15);
                         color: var(--primary);
                     }
 
                     .nav-link.active {
-                        background-color: #eff6ff; /* พื้นหลังสีฟ้าอ่อน */
-                        color: var(--primary);     /* ตัวหนังสือสีฟ้าเข้ม */
+                        background-color: rgba(59,130,246,0.18);
+                        color: var(--primary);
                         font-weight: 600;
                     }
 
                     /* Notification Badge */
                     .notif-badge {
                         position: absolute;
-                        /* แก้ไขตำแหน่งตรงนี้: ปรับ top และ right เป็นค่าติดลบเพื่อดันออกไป */
-                        top: -5px; 
+                        top: -5px;
                         right: -5px;
                         background: #ef4444;
                         color: white;
@@ -253,20 +262,23 @@ function Header({ title, logoSrc = '/public/healthqueue.png', onBack }) {
 
                     /* Back Button */
                     .btn-back {
-                        background: none;
-                        border: 1px solid #e2e8f0;
+                        background: rgba(59,130,246,0.12);
+                        border: 1px solid rgba(59,130,246,0.2);
                         border-radius: 50%;
                         width: 40px; height: 40px;
                         display: flex; justify-content: center; align-items: center;
                         cursor: pointer;
-                        color: #64748b;
+                        color: #1e40af;
                     }
-                    .btn-back:hover { background: #f1f5f9; color: var(--primary); }
+                    .btn-back:hover {
+                        background: rgba(59,130,246,0.22);
+                        color: #1e3a8a;
+                    }
 
                     /* Mobile Responsive */
                     @media (max-width: 768px) {
-                        .nav-text { display: none; } /* ซ่อน text ในมือถือ */
-                        .nav-link { padding: 0.6rem; border-radius: 50%; } /* เปลี่ยนเป็นวงกลม */
+                        .nav-text { display: none; }
+                        .nav-link { padding: 0.6rem; border-radius: 50%; }
                     }
                 `}
             </style>
@@ -572,15 +584,15 @@ function Header({ title, logoSrc = '/public/healthqueue.png', onBack }) {
                     {/* Move language selector to after profile */}
                     <div ref={langRef} style={{ display: 'flex', alignItems: 'center', marginLeft: 8, position: 'relative' }}>
                         <style>{`
-                            .lang-btn { display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius:20px; border:1px solid #eef2ff; background: linear-gradient(180deg,#ffffff,#f8fafc); box-shadow:0 6px 18px rgba(30,64,175,0.06); cursor:pointer; color:#1f2937; font-weight:600; }
-                            .lang-btn:hover { transform: translateY(-1px); box-shadow:0 10px 30px rgba(30,64,175,0.12); }
+                            .lang-btn { display:inline-flex; align-items:center; gap:8px; padding:6px 14px; border-radius:20px; border:1px solid rgba(59,130,246,0.25); background: rgba(219,234,254,0.5); box-shadow:0 2px 8px rgba(30,64,175,0.06); cursor:pointer; color:#1e3a5f; font-weight:600; transition: all 0.2s; }
+                            .lang-btn:hover { background: rgba(59,130,246,0.18); transform: translateY(-1px); box-shadow:0 6px 18px rgba(30,64,175,0.12); }
                             .lang-flag { font-size:18px; }
                             .lang-label { font-size:13px; display:inline-block; min-width:36px; text-align:left; }
-                            .lang-caret { margin-left:4px; color:#64748b; font-size:12px; }
-                            .lang-menu { position:absolute; right:0; margin-top:8px; background: white; border-radius:12px; box-shadow:0 12px 40px rgba(2,6,23,0.12); min-width:160px; overflow:hidden; border:1px solid #eef2ff; z-index:1200; }
+                            .lang-caret { margin-left:4px; color:#475569; font-size:12px; }
+                            .lang-menu { position:absolute; right:0; margin-top:8px; background: rgba(240,247,255,0.92); backdrop-filter:blur(12px); border-radius:12px; box-shadow:0 12px 40px rgba(30,64,175,0.14); min-width:160px; overflow:hidden; border:1px solid rgba(59,130,246,0.2); z-index:1200; }
                             .lang-menu button { width:100%; display:flex; gap:8px; align-items:center; padding:10px 12px; background:transparent; border:none; cursor:pointer; text-align:left; color:#334155; font-weight:600; }
-                            .lang-menu button:hover { background:#f8fafc; color:#0b5cff; }
-                            .lang-menu .selected { background:#eff6ff; color:#0b5cff; }
+                            .lang-menu button:hover { background:rgba(59,130,246,0.12); color:#1e40af; }
+                            .lang-menu .selected { background:rgba(59,130,246,0.18); color:#1e40af; }
                         `}</style>
                         <button
                             className="lang-btn"

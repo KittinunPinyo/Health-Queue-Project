@@ -1,14 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import './Login.css';
 
 // --- Internal Header Component (Updated Style with Image Logo) ---
 const Header = ({ title, onBack }) => {
     return (
         <header style={{
             height: '4.5rem',
-            backgroundColor: 'white',
-            boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
+            background: 'linear-gradient(135deg, rgba(255,255,255,0.82) 0%, rgba(239,246,255,0.78) 60%, rgba(219,234,254,0.72) 100%)',
+            backdropFilter: 'blur(20px) saturate(1.6)',
+            WebkitBackdropFilter: 'blur(20px) saturate(1.6)',
+            boxShadow: '0 1px 0 rgba(59,130,246,0.14), 0 4px 24px rgba(30,64,175,0.07)',
+            borderBottom: '1.5px solid rgba(147,197,253,0.35)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -18,7 +22,8 @@ const Header = ({ title, onBack }) => {
             left: 0,
             width: '100%',
             zIndex: 1000,
-            boxSizing: 'border-box'
+            boxSizing: 'border-box',
+            fontFamily: "'Sarabun', 'Prompt', sans-serif"
         }}>
             {/* Left Side: Logo & Back Button */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', zIndex: 2 }}>
@@ -26,20 +31,20 @@ const Header = ({ title, onBack }) => {
                     <button 
                         onClick={onBack}
                         style={{
-                            background: '#f3f4f6',
-                            border: 'none',
+                            background: 'rgba(59,130,246,0.12)',
+                            border: '1px solid rgba(59,130,246,0.2)',
                             borderRadius: '50%',
                             width: '40px',
                             height: '40px',
                             cursor: 'pointer',
-                            color: '#374151',
+                            color: '#1e40af',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             transition: 'background 0.2s'
                         }}
-                        onMouseEnter={(e) => e.currentTarget.style.background = '#e5e7eb'}
-                        onMouseLeave={(e) => e.currentTarget.style.background = '#f3f4f6'}
+                        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(59,130,246,0.22)'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(59,130,246,0.12)'}
                     >
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                             <line x1="19" y1="12" x2="5" y2="12"></line>
@@ -48,13 +53,12 @@ const Header = ({ title, onBack }) => {
                     </button>
                 )}
                 
-                {/* Logo (Image from public folder) */}
+                {/* Logo */}
                 <div style={{ display: 'flex', alignItems: 'center' }}>
                     <img 
                         src="/public/healthqueue.png" 
                         alt="Health Queue Logo" 
                         onError={(e) => {
-                            // หากไฟล์รูปไม่โหลด ให้เปลี่ยนเป็น placeholder (ลด console 404)
                             e.currentTarget.onerror = null;
                             e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'%3E%3Crect width=\'100\' height=\'100\' fill=\'%23007bff\'/%3E%3Ctext x=\'50\' y=\'55\' font-size=\'50\' text-anchor=\'middle\' fill=\'white\' font-family=\'Arial,Helvetica,sans-serif\'%3EH%3C/text%3E%3C/svg%3E';
                         }}
@@ -62,23 +66,24 @@ const Header = ({ title, onBack }) => {
                             width: '100px', 
                             height: '100px', 
                             objectFit: 'contain',
-                            borderRadius: '8px' // ปรับมนเล็กน้อยเพื่อให้ดูสวยงาม
                         }} 
                     />
                 </div>
             </div>
 
-            {/* Center: Title (Absolute Center) */}
+            {/* Center: Title */}
             <h1 style={{ 
                 margin: 0, 
-                fontSize: '1.2rem', 
-                color: '#1f2937',
+                fontSize: '1.15rem', 
+                color: '#1e3a5f',
                 fontWeight: '700',
+                letterSpacing: '0.01em',
                 position: 'absolute',
                 left: '50%',
                 transform: 'translateX(-50%)',
                 whiteSpace: 'nowrap',
-                zIndex: 1
+                zIndex: 1,
+                fontFamily: "'Sarabun', 'Prompt', sans-serif"
             }}>
                 {title}
             </h1>
@@ -165,13 +170,16 @@ const CustomAlert = ({ isOpen, message, type, onClose }) => {
 
 const authContainerStyle = {
   minHeight: '100vh', 
-  paddingTop: '4.5rem',
+  paddingTop: '5.5rem',
+  paddingBottom: '2rem',
   display: 'flex',
   alignItems: 'center',    
   justifyContent: 'center', 
   paddingLeft: '1rem',
   paddingRight: '1rem',
   boxSizing: 'border-box',
+  position: 'relative',
+  zIndex: 1,
 };
 
 function Login() {
@@ -310,8 +318,12 @@ function Login() {
     };
 
     return (
-        <div style={{ backgroundColor: '#f4f7f6', minHeight: '100vh' }}>
-            
+        <div style={{ background: '#f0f7ff', minHeight: '100vh', position: 'relative', overflowX: 'hidden' }}>
+                {/* ── Decorative background blobs ── */}
+                <div className="login-blob-top-right" />
+                <div className="login-blob-bottom-left" />
+                <div className="login-blob-mid-right" />
+
             <CustomAlert 
                 isOpen={alertState.isOpen} 
                 message={alertState.message} 
@@ -332,8 +344,21 @@ function Login() {
                 >
                     <div className="container" style={{padding: 0}}>
                         <div className="card">
-                            <h2 style={{textAlign: 'center', marginBottom: '10px'}}>ยินดีต้อนรับ</h2>
-                            <p style={{fontSize: '0.9rem', color: '#666', textAlign: 'center', marginBottom: '20px'}}>
+                            <h2 style={{
+                                textAlign: 'center',
+                                marginBottom: '8px',
+                                fontSize: '2rem',
+                                fontWeight: '800',
+                                color: '#1e3a8a',
+                                letterSpacing: '-0.02em'
+                            }}>ยินดีต้อนรับ</h2>
+                            <p style={{
+                                fontSize: '0.92rem',
+                                color: '#64748b',
+                                textAlign: 'center',
+                                marginBottom: '28px',
+                                lineHeight: '1.7'
+                            }}>
                                 โปรดเข้าสู่ระบบด้วยบัญชีที่คุณได้เคยสมัครไว้บนเว็บไซต์ ถ้าคุณยังไม่มีบัญชีให้สมัครสมาชิกด้านล่าง
                             </p>
                             
@@ -372,21 +397,44 @@ function Login() {
                 >
                     <div className="container" style={{padding: 0}}>
                         <div className="card">
-                            <h2 style={{textAlign: 'center', marginBottom: '10px'}}>สมัครสมาชิก</h2>
-                            <p style={{textAlign: 'center', marginBottom: '20px', color: '#666'}}>
+                            <h2 style={{
+                                textAlign: 'center',
+                                marginBottom: '4px',
+                                fontSize: '1.8rem',
+                                fontWeight: '800',
+                                color: '#1e3a8a',
+                                letterSpacing: '-0.02em'
+                            }}>สมัครสมาชิก</h2>
+                            <p style={{
+                                textAlign: 'center',
+                                marginBottom: '12px',
+                                color: '#64748b',
+                                fontSize: '0.88rem',
+                                fontWeight: '500'
+                            }}>
                                 {regStep === 1 ? 'ขั้นตอนที่ 1: ข้อมูลบัญชี' : 'ขั้นตอนที่ 2: ข้อมูลสุขภาพ'}
                             </p>
                             
-                            <div style={{display: 'flex', gap: '5px', marginBottom: '20px', justifyContent: 'center'}}>
-                                <div style={{height: '4px', width: '30px', background: '#007bff', borderRadius: '2px'}}></div>
-                                <div style={{height: '4px', width: '30px', background: regStep === 2 ? '#007bff' : '#eee', borderRadius: '2px'}}></div>
+                            <div style={{display: 'flex', gap: '6px', marginBottom: '16px', justifyContent: 'center'}}>
+                                <div style={{height: '5px', width: '40px', background: '#2563eb', borderRadius: '3px'}}></div>
+                                <div style={{height: '5px', width: '40px', background: regStep === 2 ? '#2563eb' : '#dbeafe', borderRadius: '3px', transition: 'background 0.3s'}}></div>
                             </div>
 
                             <form id="register-form" onSubmit={handleRegister}>
                                 
                                 {regStep === 1 && (
                                     <div className="step-1-content">
-                                            <h4 style={{marginTop: '0', borderBottom: '1px solid #eee', paddingBottom: '5px'}}>1. ข้อมูลบัญชี</h4>
+                                            <h4 style={{
+                                                marginTop: '0',
+                                                marginBottom: '12px',
+                                                borderBottom: '1.5px solid #dbeafe',
+                                                paddingBottom: '8px',
+                                                fontSize: '0.8rem',
+                                                fontWeight: '700',
+                                                color: '#2563eb',
+                                                letterSpacing: '0.06em',
+                                                textTransform: 'uppercase'
+                                            }}>1. ข้อมูลบัญชี</h4>
                                             <div className="input-group">
                                                 <label htmlFor="name-register">ชื่อ-นามสกุล</label>
                                                 <input 
@@ -426,7 +474,17 @@ function Login() {
 
                                 {regStep === 2 && (
                                     <div className="step-2-content">
-                                            <h4 style={{marginTop: '0', borderBottom: '1px solid #eee', paddingBottom: '5px'}}>2. ข้อมูลสุขภาพ</h4>
+                                            <h4 style={{
+                                                marginTop: '0',
+                                                marginBottom: '12px',
+                                                borderBottom: '1.5px solid #dbeafe',
+                                                paddingBottom: '8px',
+                                                fontSize: '0.8rem',
+                                                fontWeight: '700',
+                                                color: '#2563eb',
+                                                letterSpacing: '0.06em',
+                                                textTransform: 'uppercase'
+                                            }}>2. ข้อมูลสุขภาพ</h4>
                                             <div className="input-group">
                                                 <label htmlFor="reg-dob">วันเกิด</label>
                                                 <input 

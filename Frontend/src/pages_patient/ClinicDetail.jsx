@@ -21,12 +21,7 @@ const readStoredUser = () => {
     try {
         const sessionUser = JSON.parse(sessionStorage.getItem('currentUser') || 'null');
         if (sessionUser) return sessionUser;
-
-        const localUser = JSON.parse(localStorage.getItem('user') || 'null');
-        if (localUser) {
-            sessionStorage.setItem('currentUser', JSON.stringify(localUser));
-        }
-        return localUser;
+        return null;
     } catch {
         return null;
     }
@@ -2129,7 +2124,7 @@ function ClinicDetail() {
     };
 
     return (
-        <div className="page active">
+        <div className="page active" style={{ paddingTop: '72px', paddingBottom: '88px' }}>
             <main style={styles.container}>
                 <div style={styles.header}>
                     <h1 style={styles.title}>{t('makeAppointment')}</h1>

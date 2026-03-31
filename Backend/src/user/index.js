@@ -38,6 +38,7 @@ async function initializeDatabase() {
         name TEXT NOT NULL,
         email TEXT UNIQUE NOT NULL,
         password TEXT NOT NULL,
+        phone TEXT,
         id_card TEXT,
         date_of_birth DATE,
         age INTEGER,
@@ -52,6 +53,9 @@ async function initializeDatabase() {
       )
     `);
     console.log('Users table ready.');
+
+    // เพิ่มคอลัมน์สำหรับฐานข้อมูลเดิมที่ยังไม่มี
+    await dbRun(`ALTER TABLE users ADD COLUMN IF NOT EXISTS phone TEXT`);
 
     // สร้างตาราง appointments สำหรับข้อมูลการนัดหมาย
     await dbRun(`
@@ -114,9 +118,9 @@ async function initializeDatabase() {
     if (Number(row?.count) === 0) {
       const defaultPassword = await hashPassword('password123');
       await dbInsert(
-        `INSERT INTO users (name, email, password, id_card, date_of_birth, age, gender, height, weight, medical_conditions, allergies, role)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'patient')`,
-        ['Test User', 'testuser1@gmail.com', defaultPassword, '1234567890123', '2000-01-01', 26, 'ชาย', 170, 65, '', '']
+        `INSERT INTO users (name, email, password, phone, id_card, date_of_birth, age, gender, height, weight, medical_conditions, allergies, role)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'patient')`,
+        ['Test User', 'testuser1@gmail.com', defaultPassword, '0812345678', '1234567890123', '2000-01-01', 26, 'ชาย', 170, 65, '', '']
       );
       console.log('✅ Default user created: testuser1@gmail.com / password123');
     }
@@ -178,7 +182,9 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openApiDocument, {
   customSiteTitle: 'Health Queue API Docs',
 }));
 // รวมกลุ่ม API login/register/profile ไว้ที่ /api/auth
-app.use('/api/auth', createUserRouter({ dbGet, dbInsert, jwtSecret: JWT_SECRET }));
+app.use('/api/auth', createUserRouter({ dbGet, dbInsert, dbRun, jwtSecret: JWT_SECRET }));
+// รองรับเส้นทางชุด user management ตามสเปคใหม่
+app.use('/api/user', createUserRouter({ dbGet, dbInsert, dbRun, jwtSecret: JWT_SECRET }));
 // รวมกลุ่ม API hospitals ตามรูปตัวอย่าง
 app.use('/api/hospitals', createHospitalsRouter({ dbGet, dbAll, dbRun, dbInsert }));
 // รวมกลุ่ม API doctors ตามรูปตัวอย่าง

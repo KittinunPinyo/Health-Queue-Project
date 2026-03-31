@@ -33,20 +33,22 @@ function Footer() {
     // --- Styles ---
     const styles = {
         footer: {
-            background: 'linear-gradient(90deg, #4b82dbff 0%, #4d7bb3ff 50%, #589be9ff 100%)', // ไล่สีฟ้าตามธีม
+            background: 'radial-gradient(circle at 15% 20%, rgba(59,130,246,0.24) 0%, transparent 28%), radial-gradient(circle at 85% 25%, rgba(37,99,235,0.22) 0%, transparent 32%), linear-gradient(135deg, #0b1635 0%, #1e3a8a 55%, #1d4ed8 100%)',
             color: 'white',
-            padding: '20px 0 10px',
+            padding: '34px 0 0',
             fontFamily: "'Prompt', sans-serif",
-            marginTop: 'auto'
+            marginTop: 'auto',
+            borderTop: '1px solid rgba(147,197,253,0.45)',
+            boxShadow: '0 -10px 42px rgba(15,23,42,0.35)'
         },
         container: {
             maxWidth: '1200px',
             margin: '0 auto',
-            padding: '0 20px',
+            padding: '0 24px',
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-            gap: '40px',
-            marginBottom: '40px'
+            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+            gap: '28px',
+            marginBottom: '26px'
         },
         column: {
             display: 'flex',
@@ -54,16 +56,20 @@ function Footer() {
             alignItems: 'flex-start'
         },
         title: {
-            fontSize: '1.2rem',
+            fontSize: '0.8rem',
             fontWeight: '700',
-            marginBottom: '20px',
-            position: 'relative'
+            marginBottom: '12px',
+            position: 'relative',
+            color: '#dbeafe',
+            letterSpacing: '0.06em',
+            textTransform: 'uppercase'
         },
         text: {
             fontSize: '0.9rem',
-            lineHeight: '1.6',
-            color: '#e0f2fe', // สีฟ้าอ่อนมากๆ
-            margin: 0
+            lineHeight: '1.75',
+            color: '#cbd5e1',
+            margin: 0,
+            maxWidth: '320px'
         },
         linkList: {
             listStyle: 'none',
@@ -71,49 +77,72 @@ function Footer() {
             margin: 0
         },
         linkItem: {
-            marginBottom: '10px'
+            marginBottom: '8px'
         },
         link: {
-            color: '#e0f2fe',
+            color: '#cbd5e1',
             textDecoration: 'none',
-            fontSize: '0.95rem',
+            fontSize: '0.9rem',
             transition: 'color 0.2s, padding-left 0.2s',
             display: 'inline-block'
         },
         contactItem: {
             display: 'flex',
             alignItems: 'center',
-            marginBottom: '12px',
-            color: '#e0f2fe',
-            fontSize: '0.95rem'
+            marginBottom: '6px',
+            color: '#cbd5e1',
+            fontSize: '0.9rem'
         },
         socialContainer: {
             display: 'flex',
-            gap: '15px'
+            gap: '12px'
         },
         socialIcon: {
-            color: 'white',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '38px',
+            height: '38px',
+            borderRadius: '50%',
+            background: 'rgba(255,255,255,0.12)',
+            border: '1px solid rgba(147,197,253,0.4)',
+            color: '#dbeafe',
             cursor: 'pointer',
-            transition: 'transform 0.2s',
-            opacity: 0.9
+            transition: 'all 0.2s',
+            textDecoration: 'none',
+            boxShadow: '0 4px 14px rgba(15,23,42,0.25)'
         },
         copyright: {
             textAlign: 'center',
-            paddingTop: '20px',
-            borderTop: '1px solid rgba(255, 255, 255, 0.2)',
-            fontSize: '0.85rem',
-            color: '#dbeafe'
+            padding: '16px',
+            marginTop: '0',
+            borderTop: '1px solid rgba(147,197,253,0.2)',
+            fontSize: '0.82rem',
+            color: '#93c5fd',
+            background: 'rgba(2,6,23,0.28)'
         }
     };
 
-    // Helper เพื่อทำ Hover Effect แบบ Inline
     const handleMouseEnter = (e) => {
-        e.target.style.color = 'white';
-        e.target.style.paddingLeft = '5px';
+        e.target.style.color = '#f8fafc';
+        e.target.style.paddingLeft = '6px';
     };
     const handleMouseLeave = (e) => {
-        e.target.style.color = '#e0f2fe';
+        e.target.style.color = '#cbd5e1';
         e.target.style.paddingLeft = '0';
+    };
+
+    const handleSocialEnter = (e) => {
+        e.currentTarget.style.background = 'rgba(147,197,253,0.28)';
+        e.currentTarget.style.borderColor = 'rgba(191,219,254,0.8)';
+        e.currentTarget.style.color = '#ffffff';
+        e.currentTarget.style.transform = 'translateY(-3px) scale(1.04)';
+    };
+    const handleSocialLeave = (e) => {
+        e.currentTarget.style.background = 'rgba(255,255,255,0.12)';
+        e.currentTarget.style.borderColor = 'rgba(147,197,253,0.4)';
+        e.currentTarget.style.color = '#dbeafe';
+        e.currentTarget.style.transform = 'translateY(0) scale(1)';
     };
 
     return (
@@ -141,7 +170,7 @@ function Footer() {
                             <Link to="/patient/my-appointments" style={styles.link} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>นัดหมาย</Link>
                         </li>
                         <li style={styles.linkItem}>
-                            <Link to="/patient/clinics" style={styles.link} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>แชทกับสอบถาม</Link>
+                            <Link to="/patient/clinics" style={styles.link} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>แชทและสอบถาม</Link>
                         </li>
                         <li style={styles.linkItem}>
                             <Link to="/patient/history" style={styles.link} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>ประวัติการนัดหมาย</Link>
@@ -162,13 +191,16 @@ function Footer() {
                 <div style={styles.column}>
                     <h3 style={styles.title}>ติดตามเรา</h3>
                     <div style={styles.socialContainer}>
-                        <a href="#" style={styles.socialIcon} aria-label="Facebook">
+                        <a href="#" style={styles.socialIcon} aria-label="Facebook"
+                            onMouseEnter={handleSocialEnter} onMouseLeave={handleSocialLeave}>
                             <FacebookIcon />
                         </a>
-                        <a href="#" style={styles.socialIcon} aria-label="Instagram">
+                        <a href="#" style={styles.socialIcon} aria-label="Instagram"
+                            onMouseEnter={handleSocialEnter} onMouseLeave={handleSocialLeave}>
                             <InstagramIcon />
                         </a>
-                        <a href="#" style={styles.socialIcon} aria-label="Line">
+                        <a href="#" style={styles.socialIcon} aria-label="Line"
+                            onMouseEnter={handleSocialEnter} onMouseLeave={handleSocialLeave}>
                             <LineIcon />
                         </a>
                     </div>
