@@ -205,12 +205,13 @@ function ClinicDetail() {
                         image: h.image || h.logo || local.image || 'https://placehold.co/600x400/eeeeee/888888?text=No+Image',
                         address: h.address || local.address || '',
                         phone: h.phone || local.phone || '',
-                    email: h.email || local.email || '',
-                    website: h.website || local.website || '',
+                        nurse_phone: h.nurse_phone || local.nurse_phone || '',
+                        email: h.email || local.email || '',
+                        website: h.website || local.website || '',
                         doctors: doctorsByHospital[String(h.id)] || local.doctors || [],
-                };
-            });
-            localStorage.setItem('clinicsData', JSON.stringify(clinics));
+                    };
+                });
+                localStorage.setItem('clinicsData', JSON.stringify(clinics));
         } catch (error) {
             // หาก API ไม่พร้อม ให้ใช้ localStorage เดิม
         }
@@ -428,6 +429,10 @@ function ClinicDetail() {
         header: { textAlign: 'center', marginBottom: '2rem' },
         title: { fontSize: '2rem', fontWeight: '700', color: '#1e40af', marginBottom: '0.5rem', borderBottom: '3px solid #1e40af', display: 'inline-block', paddingBottom: '0.25rem' },
         subtitle: { backgroundColor: '#dbeafe', color: '#1e40af', padding: '0.5rem 1rem', borderRadius: '20px', display: 'inline-block', marginTop: '1rem', fontSize: '0.95rem', textAlign: 'center', marginBottom: '2rem' },
+        clinicCard: { backgroundColor: 'white', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 2px 12px rgba(0,0,0,0.08)', marginBottom: '2rem' },
+        clinicInfoRow: { display: 'flex', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '0.85rem', alignItems: 'flex-start' },
+        clinicInfoLabel: { minWidth: '110px', color: '#4b5563', fontWeight: '600' },
+        clinicInfoValue: { color: '#111827', flex: 1, wordBreak: 'break-word' },
         progressContainer: { display: 'flex', justifyContent: 'space-between', marginBottom: '3rem', position: 'relative' },
         progressLine: { position: 'absolute', top: '20px', left: '12.5%', right: '12.5%', height: '2px', backgroundColor: '#e5e7eb', zIndex: 0 },
         step: { display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, position: 'relative', zIndex: 1 },
@@ -2131,6 +2136,42 @@ function ClinicDetail() {
                 </div>
                 <div style={{textAlign: 'center'}}>
                     <div style={styles.subtitle}>{t('hospital')} {clinic.name}</div>
+                </div>
+
+                <div style={styles.clinicCard}>
+                    <img
+                        src={clinic.image || 'https://placehold.co/1200x600/eeeeee/888888?text=No+Image'}
+                        alt={clinic.name}
+                        style={{ width: '100%', height: '280px', objectFit: 'cover', borderRadius: '14px', marginBottom: '1rem' }}
+                    />
+                    <div style={styles.clinicInfoRow}>
+                        <div style={styles.clinicInfoLabel}>{t('address')}:</div>
+                        <div style={styles.clinicInfoValue}>{clinic.address || 'ไม่ระบุ'}</div>
+                    </div>
+                    <div style={styles.clinicInfoRow}>
+                        <div style={styles.clinicInfoLabel}>{t('email')}:</div>
+                        <div style={styles.clinicInfoValue}>{clinic.email || 'ไม่ระบุ'}</div>
+                    </div>
+                    <div style={styles.clinicInfoRow}>
+                        <div style={styles.clinicInfoLabel}>{t('phone')}:</div>
+                        <div style={styles.clinicInfoValue}>{clinic.phone || 'ไม่ระบุ'}</div>
+                    </div>
+                    {clinic.nurse_phone && (
+                        <div style={styles.clinicInfoRow}>
+                            <div style={styles.clinicInfoLabel}>เบอร์พยาบาล:</div>
+                            <div style={styles.clinicInfoValue}>{clinic.nurse_phone}</div>
+                        </div>
+                    )}
+                    {clinic.website && (
+                        <div style={styles.clinicInfoRow}>
+                            <div style={styles.clinicInfoLabel}>{t('website')}:</div>
+                            <div style={styles.clinicInfoValue}>
+                                <a href={clinic.website} target="_blank" rel="noopener noreferrer" style={{ color: '#1e40af' }}>
+                                    {clinic.website}
+                                </a>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 <div style={styles.progressContainer}>

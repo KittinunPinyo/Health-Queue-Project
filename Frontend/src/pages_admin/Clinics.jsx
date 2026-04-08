@@ -149,8 +149,14 @@ function Clinics() {
     // (State สำหรับ Forms)
     const [addClinicName, setAddClinicName] = useState('');
     const [addClinicImage, setAddClinicImage] = useState('');
+    const [addClinicEmail, setAddClinicEmail] = useState('');
+    const [addClinicPhone, setAddClinicPhone] = useState('');
+    const [addClinicAddress, setAddClinicAddress] = useState('');
     const [editClinicName, setEditClinicName] = useState('');
     const [editClinicImage, setEditClinicImage] = useState('');
+    const [editClinicEmail, setEditClinicEmail] = useState('');
+    const [editClinicPhone, setEditClinicPhone] = useState('');
+    const [editClinicAddress, setEditClinicAddress] = useState('');
     const [addDoctorName, setAddDoctorName] = useState('');
     const [addDoctorSpecialty, setAddDoctorSpecialty] = useState('');
     const [addDoctorImage, setAddDoctorImage] = useState('');
@@ -280,9 +286,9 @@ function Clinics() {
 
             const response = await axios.post('/api/hospitals', {
                 name: addClinicName,
-                address: '',
-                phone: '',
-                email: '',
+                address: addClinicAddress.trim(),
+                phone: addClinicPhone.trim(),
+                email: addClinicEmail.trim(),
                 website: '',
                 logo: image,
             });
@@ -292,6 +298,9 @@ function Clinics() {
 
             setAddClinicName('');
             setAddClinicImage('');
+            setAddClinicEmail('');
+            setAddClinicPhone('');
+            setAddClinicAddress('');
             alert('เพิ่มโรงพยาบาล/คลินิกใหม่ และแจ้งเตือนคนไข้เรียบร้อยแล้ว');
         } catch (error) {
             console.error('Add clinic error:', error);
@@ -305,6 +314,9 @@ function Clinics() {
         setCurrentEditingClinicId(id);
         setEditClinicName(clinic.name);
         setEditClinicImage(clinic.image);
+        setEditClinicEmail(clinic.email || '');
+        setEditClinicPhone(clinic.phone || '');
+        setEditClinicAddress(clinic.address || '');
         setDoctorSearchTerm('');
         setActiveSpecialty('all');
         setView('detail');
@@ -326,6 +338,9 @@ function Clinics() {
             const image = editClinicImage.trim() || `https://placehold.co/600x400/008080/FFFFFF?text=${encodeURIComponent(editClinicName)}`;
             await axios.put(`/api/hospitals/${selectedClinic.id}`, {
                 name: editClinicName,
+                address: editClinicAddress.trim(),
+                phone: editClinicPhone.trim(),
+                email: editClinicEmail.trim(),
                 logo: image,
             });
 
@@ -490,6 +505,31 @@ function Clinics() {
                                            style={{width: '100%', padding: '0.9rem', borderRadius: '12px', border: '1px solid #d1d5db', fontSize: '1rem'}} />
                                 </div>
                                 <div>
+                                    <label style={{display: 'block', marginBottom: '0.5rem', fontSize: '1rem', fontWeight: 500, color: '#374151'}}>ที่อยู่โรงพยาบาล/คลินิก</label>
+                                    <input type="text" className="input" 
+                                           placeholder="เช่น 123 ถ.สุขุมวิท แขวงคลองเตย เขตคลองเตย"
+                                           value={addClinicAddress} onChange={(e) => setAddClinicAddress(e.target.value)}
+                                           style={{width: '100%', padding: '0.9rem', borderRadius: '12px', border: '1px solid #d1d5db', fontSize: '1rem'}} />
+                                </div>
+                            </div>
+                                            <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem'}}>
+                                <div>
+                                    <label style={{display: 'block', marginBottom: '0.5rem', fontSize: '1rem', fontWeight: 500, color: '#374151'}}>อีเมลโรงพยาบาล/คลินิก</label>
+                                    <input type="email" className="input" 
+                                           placeholder="hospital@example.com"
+                                           value={addClinicEmail} onChange={(e) => setAddClinicEmail(e.target.value)}
+                                           style={{width: '100%', padding: '0.9rem', borderRadius: '12px', border: '1px solid #d1d5db', fontSize: '1rem'}} />
+                                </div>
+                                <div>
+                                    <label style={{display: 'block', marginBottom: '0.5rem', fontSize: '1rem', fontWeight: 500, color: '#374151'}}>เบอร์โทรศัพท์</label>
+                                    <input type="tel" className="input" 
+                                           placeholder="เช่น 02-123-4567"
+                                           value={addClinicPhone} onChange={(e) => setAddClinicPhone(e.target.value)}
+                                           style={{width: '100%', padding: '0.9rem', borderRadius: '12px', border: '1px solid #d1d5db', fontSize: '1rem'}} />
+                                </div>
+                            </div>
+                            <div style={{display: 'grid', gridTemplateColumns: '1fr', gap: '1.5rem', marginBottom: '1.5rem'}}>
+                                <div>
                                     <label style={{display: 'block', marginBottom: '0.5rem', fontSize: '1rem', fontWeight: 500, color: '#374151'}}>URL รูปภาพ (ไม่บังคับ)</label>
                                     <input type="url" className="input" 
                                            placeholder="https://example.com/image.jpg"
@@ -627,6 +667,28 @@ function Clinics() {
                                         <input type="url" className="input" 
                                                value={editClinicImage} onChange={(e) => setEditClinicImage(e.target.value)}
                                                style={{width: '100%', padding: '1rem', borderRadius: '12px', border: '1px solid #d1d5db', fontSize: '1.1rem'}} />
+                                    </div>
+                                    <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.25rem'}}>
+                                        <div>
+                                            <label style={{display: 'block', marginBottom: '0.5rem', fontSize: '1.05rem', fontWeight: 500, color: '#374151'}}>ที่อยู่โรงพยาบาล/คลินิก</label>
+                                            <input type="text" className="input" 
+                                                   value={editClinicAddress} onChange={(e) => setEditClinicAddress(e.target.value)}
+                                                   style={{width: '100%', padding: '1rem', borderRadius: '12px', border: '1px solid #d1d5db', fontSize: '1.1rem'}} />
+                                        </div>
+                                        <div>
+                                            <label style={{display: 'block', marginBottom: '0.5rem', fontSize: '1.05rem', fontWeight: 500, color: '#374151'}}>เบอร์โทรศัพท์</label>
+                                            <input type="tel" className="input" 
+                                                   value={editClinicPhone} onChange={(e) => setEditClinicPhone(e.target.value)}
+                                                   style={{width: '100%', padding: '1rem', borderRadius: '12px', border: '1px solid #d1d5db', fontSize: '1.1rem'}} />
+                                        </div>
+                                    </div>
+                                    <div style={{display: 'grid', gridTemplateColumns: '1fr', gap: '1.5rem', marginBottom: '1.25rem'}}>
+                                        <div>
+                                            <label style={{display: 'block', marginBottom: '0.5rem', fontSize: '1.05rem', fontWeight: 500, color: '#374151'}}>อีเมลโรงพยาบาล/คลินิก</label>
+                                            <input type="email" className="input" 
+                                                   value={editClinicEmail} onChange={(e) => setEditClinicEmail(e.target.value)}
+                                                   style={{width: '100%', padding: '1rem', borderRadius: '12px', border: '1px solid #d1d5db', fontSize: '1.1rem'}} />
+                                        </div>
                                     </div>
                                     <button type="submit" style={{
                                         width: '100%', padding: '1rem', background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
