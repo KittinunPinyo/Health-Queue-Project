@@ -158,22 +158,64 @@ function AppointmentHistory() {
     }, [appointments]);
 
     return (
-        <div style={{ 
-            maxWidth: '1400px', 
-            margin: '0 auto',
-            padding: '0 1rem'
+        <div style={{
+            minHeight: '100vh',
+            background: 'linear-gradient(180deg, #eff6ff 0%, #f8fafc 55%, #ffffff 100%)',
+            padding: '2rem 1rem 3rem',
         }}>
-            {/* Page Header */}
-            <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '1rem',
-                marginBottom: '2rem',
-                padding: '1.5rem 2rem',
-                background: 'linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)',
-                borderRadius: '20px',
-                boxShadow: '0 10px 40px rgba(59, 130, 246, 0.3)'
-            }}>
+            <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+                {/* Page Header */}
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '1rem',
+                    marginBottom: '2rem',
+                    padding: '1.5rem 2rem',
+                    background: 'linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)',
+                    borderRadius: '24px',
+                    boxShadow: '0 24px 60px rgba(59, 130, 246, 0.18)',
+                    color: 'white',
+                    position: 'relative',
+                    overflow: 'hidden'
+                }}>
+                    <div style={{
+                        position: 'absolute',
+                        right: '-64px',
+                        top: '-64px',
+                        width: '180px',
+                        height: '180px',
+                        borderRadius: '50%',
+                        background: 'rgba(255,255,255,0.12)'
+                    }} />
+                    <div style={{
+                        position: 'absolute',
+                        left: '-40px',
+                        bottom: '-40px',
+                        width: '120px',
+                        height: '120px',
+                        borderRadius: '50%',
+                        background: 'rgba(255,255,255,0.08)'
+                    }} />
+                    <div style={{
+                        width: '56px', height: '56px', borderRadius: '18px',
+                        background: 'rgba(255,255,255,0.18)', display: 'flex',
+                        alignItems: 'center', justifyContent: 'center',
+                        zIndex: 1
+                    }}>
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                            <path d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <div style={{ position: 'relative', zIndex: 1 }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                            <span style={{ padding: '6px 14px', borderRadius: '999px', background: 'rgba(255,255,255,0.16)', fontSize: '12px', fontWeight: 700 }}>แดชบอร์ด</span>
+                        </div>
+                        <h2 style={{ margin: 0, fontSize: '1.8rem', fontWeight: 800, letterSpacing: '-0.03em' }}>ประวัติการนัดหมาย</h2>
+                        <p style={{ margin: '10px 0 0', color: 'rgba(255,255,255,0.88)', fontSize: '0.94rem', maxWidth: '620px' }}>
+                            ดูสรุปสถานะนัดหมาย, ค้นหา และกรองตามวันที่ได้อย่างรวดเร็ว พร้อมข้อมูลที่เข้าใจง่าย.
+                        </p>
+                    </div>
+                </div>
                 <div style={{
                     width: '56px', height: '56px', borderRadius: '16px',
                     background: 'rgba(255,255,255,0.2)', display: 'flex',
@@ -194,7 +236,7 @@ function AppointmentHistory() {
             {/* Stats Cards - Modern Design */}
             <div style={{ 
                 display: 'grid', 
-                gridTemplateColumns: 'repeat(5, 1fr)', 
+                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', 
                 gap: '16px',
                 marginBottom: '24px'
             }}>
@@ -412,10 +454,10 @@ function AppointmentHistory() {
             {/* Filters - Clean Design */}
             <div style={{ 
                 background: 'white', 
-                padding: '16px 20px', 
-                borderRadius: '12px', 
-                marginBottom: '20px',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                padding: '20px 24px', 
+                borderRadius: '20px', 
+                marginBottom: '24px',
+                boxShadow: '0 14px 38px rgba(15, 23, 42, 0.08)',
                 display: 'flex',
                 gap: '16px',
                 flexWrap: 'wrap',
@@ -511,20 +553,20 @@ function AppointmentHistory() {
                             }}
                             style={{
                                 padding: '10px 16px',
-                                background: '#fee2e2',
+                                background: '#eef2ff',
                                 border: 'none',
-                                borderRadius: '8px',
+                                borderRadius: '12px',
                                 fontSize: '13px',
                                 cursor: 'pointer',
-                                color: '#dc2626',
-                                fontWeight: '500',
+                                color: '#4338ca',
+                                fontWeight: '600',
                                 transition: 'all 0.2s',
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '6px'
                             }}
-                            onMouseEnter={(e) => e.target.style.background = '#fecaca'}
-                            onMouseLeave={(e) => e.target.style.background = '#fee2e2'}
+                            onMouseEnter={(e) => e.target.style.background = '#e0e7ff'}
+                            onMouseLeave={(e) => e.target.style.background = '#eef2ff'}
                         >
                             <span>✕</span> ล้าง
                         </button>
@@ -535,10 +577,10 @@ function AppointmentHistory() {
             {/* Appointments Table */}
             <div style={{ 
                 background: 'white', 
-                borderRadius: '24px', 
-                boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                borderRadius: '28px', 
+                boxShadow: '0 20px 60px rgba(15, 23, 42, 0.08)',
                 overflow: 'hidden',
-                border: '1px solid #e2e8f0'
+                border: '1px solid rgba(229, 231, 235, 0.85)'
             }}>
                 <div style={{ overflowX: 'auto' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '900px' }}>
@@ -645,7 +687,8 @@ function AppointmentHistory() {
                                         className="table-row-hover"
                                         style={{ 
                                             borderBottom: '1px solid #f1f5f9',
-                                            transition: 'all 0.2s ease'
+                                            transition: 'all 0.2s ease',
+                                            background: 'white'
                                         }}
                                     >
                                         <td style={{ padding: '18px 20px', fontSize: '14px', color: '#1e293b', fontWeight: '600', textAlign: 'center' }}>

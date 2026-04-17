@@ -3,20 +3,21 @@ export const openApiDocument = {
   info: {
     title: 'Health Queue API',
     version: '1.0.0',
-    description: 'API documentation for authentication, hospitals, doctors, and appointments.',
+    description: 'เอกสาร API สำหรับระบบยืนยันตัวตน โรงพยาบาล แพทย์ และการนัดหมาย',
   },
   servers: [
     {
       url: 'http://localhost:5000',
-      description: 'Local development server',
+      description: 'เซิร์ฟเวอร์พัฒนาในเครื่อง',
     },
   ],
   tags: [
-    { name: 'Health', description: 'Service health check' },
-    { name: 'Auth', description: 'Authentication and profile endpoints' },
-    { name: 'Hospitals', description: 'Hospital management endpoints' },
-    { name: 'Doctors', description: 'Doctor management endpoints' },
-    { name: 'Appointments', description: 'Appointment booking endpoints' },
+    { name: 'Health', description: 'ตรวจสอบสถานะเซิร์ฟเวอร์' },
+    { name: 'Auth', description: 'API สำหรับระบบเข้าสู่ระบบและโปรไฟล์ผู้ใช้' },
+    { name: 'Users', description: 'API สำหรับจัดการผู้ใช้และบทบาท' },
+    { name: 'Hospitals', description: 'API สำหรับจัดการโรงพยาบาลและคลินิก' },
+    { name: 'Doctors', description: 'API สำหรับจัดการข้อมูลแพทย์' },
+    { name: 'Appointments', description: 'API สำหรับจัดการการนัดหมาย' },
   ],
   components: {
     securitySchemes: {
@@ -30,7 +31,7 @@ export const openApiDocument = {
       ErrorResponse: {
         type: 'object',
         properties: {
-          error: { type: 'string', example: 'Unable to fetch appointments' },
+          error: { type: 'string', example: 'ไม่สามารถดึงข้อมูลนัดหมายได้' },
         },
       },
       UserProfile: {
@@ -78,7 +79,7 @@ export const openApiDocument = {
       LoginResponse: {
         type: 'object',
         properties: {
-          message: { type: 'string', example: 'Login successful' },
+          message: { type: 'string', example: 'เข้าสู่ระบบสำเร็จ' },
           user: { $ref: '#/components/schemas/UserProfile' },
           token: { type: 'string', example: 'jwt-token-here' },
         },
@@ -105,6 +106,22 @@ export const openApiDocument = {
         properties: {
           currentPassword: { type: 'string', example: 'password123' },
           newPassword: { type: 'string', minLength: 8, example: 'newPassword123' },
+        },
+      },
+      UserRoleUpdateRequest: {
+        type: 'object',
+        required: ['role'],
+        properties: {
+          role: { type: 'string', example: 'admin' },
+        },
+      },
+      UserListResponse: {
+        type: 'object',
+        properties: {
+          users: {
+            type: 'array',
+            items: { $ref: '#/components/schemas/UserProfile' },
+          },
         },
       },
       Hospital: {
@@ -269,10 +286,10 @@ export const openApiDocument = {
     '/health': {
       get: {
         tags: ['Health'],
-        summary: 'Check backend health',
+        summary: 'ตรวจสอบสถานะเซิร์ฟเวอร์',
         responses: {
           200: {
-            description: 'Service is healthy',
+            description: 'ระบบพร้อมใช้งาน',
             content: {
               'application/json': {
                 schema: {
@@ -291,7 +308,7 @@ export const openApiDocument = {
     '/api/auth/register': {
       post: {
         tags: ['Auth'],
-        summary: 'Register a new patient account',
+        summary: 'ลงทะเบียนบัญชีผู้ป่วยใหม่',
         requestBody: {
           required: true,
           content: {
@@ -302,13 +319,13 @@ export const openApiDocument = {
         },
         responses: {
           201: {
-            description: 'User registered',
+            description: 'ลงทะเบียนผู้ใช้สำเร็จ',
             content: {
               'application/json': {
                 schema: {
                   type: 'object',
                   properties: {
-                    message: { type: 'string', example: 'User registered successfully' },
+                    message: { type: 'string', example: 'ลงทะเบียนสำเร็จ' },
                     user: { $ref: '#/components/schemas/UserProfile' },
                   },
                 },
@@ -316,7 +333,7 @@ export const openApiDocument = {
             },
           },
           400: {
-            description: 'Validation error',
+            description: 'ข้อมูลไม่ถูกต้อง',
             content: {
               'application/json': {
                 schema: { $ref: '#/components/schemas/ErrorResponse' },
@@ -329,7 +346,7 @@ export const openApiDocument = {
     '/api/auth/login': {
       post: {
         tags: ['Auth'],
-        summary: 'Log in and receive a JWT token',
+        summary: 'เข้าสู่ระบบและรับโทเค็น JWT',
         requestBody: {
           required: true,
           content: {
@@ -340,7 +357,7 @@ export const openApiDocument = {
         },
         responses: {
           200: {
-            description: 'Login successful',
+            description: 'เข้าสู่ระบบสำเร็จ',
             content: {
               'application/json': {
                 schema: { $ref: '#/components/schemas/LoginResponse' },
@@ -348,7 +365,7 @@ export const openApiDocument = {
             },
           },
           401: {
-            description: 'Invalid credentials',
+            description: 'อีเมลหรือรหัสผ่านไม่ถูกต้อง',
             content: {
               'application/json': {
                 schema: { $ref: '#/components/schemas/ErrorResponse' },
@@ -361,11 +378,11 @@ export const openApiDocument = {
     '/api/auth/profile': {
       get: {
         tags: ['Auth'],
-        summary: 'Get the profile of the authenticated user',
+        summary: 'ดูข้อมูลโปรไฟล์ของผู้ใช้ที่ล็อกอิน',
         security: [{ bearerAuth: [] }],
         responses: {
           200: {
-            description: 'Authenticated profile',
+            description: 'ข้อมูลโปรไฟล์ผู้ใช้',
             content: {
               'application/json': {
                 schema: {
@@ -378,7 +395,7 @@ export const openApiDocument = {
             },
           },
           401: {
-            description: 'Missing token',
+            description: 'ไม่มีโทเค็นยืนยันตัวตน',
             content: {
               'application/json': {
                 schema: { $ref: '#/components/schemas/ErrorResponse' },
@@ -386,7 +403,7 @@ export const openApiDocument = {
             },
           },
           403: {
-            description: 'Invalid token',
+            description: 'โทเค็นไม่ถูกต้อง',
             content: {
               'application/json': {
                 schema: { $ref: '#/components/schemas/ErrorResponse' },
@@ -399,16 +416,16 @@ export const openApiDocument = {
     '/api/auth/logout': {
       post: {
         tags: ['Auth'],
-        summary: 'Log out the current user on the client side',
+        summary: 'ออกจากระบบผู้ใช้ปัจจุบัน',
         responses: {
           200: {
-            description: 'Logout acknowledged',
+            description: 'ออกจากระบบสำเร็จ',
             content: {
               'application/json': {
                 schema: {
                   type: 'object',
                   properties: {
-                    message: { type: 'string', example: 'Logged out successfully' },
+                    message: { type: 'string', example: 'ออกจากระบบสำเร็จ' },
                   },
                 },
               },
@@ -420,7 +437,7 @@ export const openApiDocument = {
     '/api/user/profile': {
       put: {
         tags: ['Auth'],
-        summary: 'Update authenticated user profile',
+        summary: 'แก้ไขข้อมูลโปรไฟล์ของผู้ใช้ที่ล็อกอิน',
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
@@ -432,13 +449,13 @@ export const openApiDocument = {
         },
         responses: {
           200: {
-            description: 'Profile updated successfully',
+            description: 'อัปเดตโปรไฟล์สำเร็จ',
             content: {
               'application/json': {
                 schema: {
                   type: 'object',
                   properties: {
-                    message: { type: 'string', example: 'Profile updated successfully' },
+                    message: { type: 'string', example: 'อัปเดตโปรไฟล์สำเร็จ' },
                     user: { $ref: '#/components/schemas/UserProfile' },
                   },
                 },
@@ -446,7 +463,7 @@ export const openApiDocument = {
             },
           },
           400: {
-            description: 'Validation error',
+            description: 'ข้อมูลไม่ถูกต้อง',
             content: {
               'application/json': {
                 schema: { $ref: '#/components/schemas/ErrorResponse' },
@@ -454,7 +471,7 @@ export const openApiDocument = {
             },
           },
           401: {
-            description: 'Missing token',
+            description: 'ไม่มีโทเค็นยืนยันตัวตน',
             content: {
               'application/json': {
                 schema: { $ref: '#/components/schemas/ErrorResponse' },
@@ -462,7 +479,7 @@ export const openApiDocument = {
             },
           },
           403: {
-            description: 'Invalid token',
+            description: 'โทเค็นไม่ถูกต้อง',
             content: {
               'application/json': {
                 schema: { $ref: '#/components/schemas/ErrorResponse' },
@@ -475,7 +492,7 @@ export const openApiDocument = {
     '/api/user/password': {
       put: {
         tags: ['Auth'],
-        summary: 'Change authenticated user password',
+        summary: 'เปลี่ยนรหัสผ่านของผู้ใช้ที่ล็อกอิน',
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
@@ -487,20 +504,20 @@ export const openApiDocument = {
         },
         responses: {
           200: {
-            description: 'Password updated successfully',
+            description: 'เปลี่ยนรหัสผ่านสำเร็จ',
             content: {
               'application/json': {
                 schema: {
                   type: 'object',
                   properties: {
-                    message: { type: 'string', example: 'Password updated successfully' },
+                    message: { type: 'string', example: 'เปลี่ยนรหัสผ่านสำเร็จ' },
                   },
                 },
               },
             },
           },
           400: {
-            description: 'Validation error or wrong current password',
+            description: 'ข้อมูลไม่ถูกต้องหรือรหัสผ่านปัจจุบันไม่ถูกต้อง',
             content: {
               'application/json': {
                 schema: { $ref: '#/components/schemas/ErrorResponse' },
@@ -508,7 +525,7 @@ export const openApiDocument = {
             },
           },
           401: {
-            description: 'Missing token',
+            description: 'ไม่มีโทเค็นยืนยันตัวตน',
             content: {
               'application/json': {
                 schema: { $ref: '#/components/schemas/ErrorResponse' },
@@ -516,7 +533,7 @@ export const openApiDocument = {
             },
           },
           403: {
-            description: 'Invalid token',
+            description: 'โทเค็นไม่ถูกต้อง',
             content: {
               'application/json': {
                 schema: { $ref: '#/components/schemas/ErrorResponse' },
@@ -529,24 +546,24 @@ export const openApiDocument = {
     '/api/user/account': {
       delete: {
         tags: ['Auth'],
-        summary: 'Delete authenticated user account',
+        summary: 'ลบบัญชีผู้ใช้ที่ล็อกอิน',
         security: [{ bearerAuth: [] }],
         responses: {
           200: {
-            description: 'Account deleted successfully',
+            description: 'ลบบัญชีสำเร็จ',
             content: {
               'application/json': {
                 schema: {
                   type: 'object',
                   properties: {
-                    message: { type: 'string', example: 'Account deleted successfully' },
+                    message: { type: 'string', example: 'ลบบัญชีสำเร็จ' },
                   },
                 },
               },
             },
           },
           401: {
-            description: 'Missing token',
+            description: 'ไม่มีโทเค็นยืนยันตัวตน',
             content: {
               'application/json': {
                 schema: { $ref: '#/components/schemas/ErrorResponse' },
@@ -554,7 +571,7 @@ export const openApiDocument = {
             },
           },
           403: {
-            description: 'Invalid token',
+            description: 'โทเค็นไม่ถูกต้อง',
             content: {
               'application/json': {
                 schema: { $ref: '#/components/schemas/ErrorResponse' },
@@ -562,7 +579,165 @@ export const openApiDocument = {
             },
           },
           500: {
-            description: 'Failed to delete account',
+            description: 'ไม่สามารถลบบัญชีได้',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/user/list': {
+      get: {
+        tags: ['Users'],
+        summary: 'ดึงรายชื่อผู้ใช้ทั้งหมดสำหรับผู้ดูแลระบบ',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'รายการผู้ใช้',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/UserListResponse' },
+              },
+            },
+          },
+          401: {
+            description: 'ไม่มีโทเค็นยืนยันตัวตน',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+              },
+            },
+          },
+          403: {
+            description: 'ต้องเป็นผู้ดูแลระบบเท่านั้น',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/user/{id}': {
+      get: {
+        tags: ['Users'],
+        summary: 'ดึงข้อมูลผู้ใช้ตาม ID สำหรับผู้ดูแลระบบ',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'integer' },
+          },
+        ],
+        responses: {
+          200: {
+            description: 'พบผู้ใช้',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    user: { $ref: '#/components/schemas/UserProfile' },
+                  },
+                },
+              },
+            },
+          },
+          401: {
+            description: 'ไม่มีโทเค็นยืนยันตัวตน',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+              },
+            },
+          },
+          403: {
+            description: 'ต้องเป็นผู้ดูแลระบบเท่านั้น',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+              },
+            },
+          },
+          404: {
+            description: 'ไม่พบผู้ใช้',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/user/{id}/role': {
+      put: {
+        tags: ['Users'],
+        summary: 'แก้ไขบทบาทผู้ใช้สำหรับผู้ดูแลระบบ',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'integer' },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/UserRoleUpdateRequest' },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'ปรับบทบาทผู้ใช้สำเร็จ',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    message: { type: 'string', example: 'User role updated' },
+                    user: { $ref: '#/components/schemas/UserProfile' },
+                  },
+                },
+              },
+            },
+          },
+          400: {
+            description: 'บทบาทไม่ถูกต้อง',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+              },
+            },
+          },
+          401: {
+            description: 'ไม่มีโทเค็นยืนยันตัวตน',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+              },
+            },
+          },
+          403: {
+            description: 'ต้องเป็นผู้ดูแลระบบเท่านั้น',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+              },
+            },
+          },
+          404: {
+            description: 'ไม่พบผู้ใช้',
             content: {
               'application/json': {
                 schema: { $ref: '#/components/schemas/ErrorResponse' },
@@ -575,10 +750,10 @@ export const openApiDocument = {
     '/api/hospitals': {
       get: {
         tags: ['Hospitals'],
-        summary: 'List hospitals',
+        summary: 'ดึงรายชื่อโรงพยาบาล/คลินิก',
         responses: {
           200: {
-            description: 'Hospital list',
+            description: 'รายการโรงพยาบาล/คลินิก',
             content: {
               'application/json': {
                 schema: {
@@ -597,7 +772,7 @@ export const openApiDocument = {
       },
       post: {
         tags: ['Hospitals'],
-        summary: 'Create a hospital',
+        summary: 'สร้างโรงพยาบาล/คลินิกใหม่',
         requestBody: {
           required: true,
           content: {
@@ -608,13 +783,13 @@ export const openApiDocument = {
         },
         responses: {
           201: {
-            description: 'Hospital created',
+            description: 'สร้างโรงพยาบาล/คลินิกสำเร็จ',
             content: {
               'application/json': {
                 schema: {
                   type: 'object',
                   properties: {
-                    message: { type: 'string', example: 'Hospital created' },
+                    message: { type: 'string', example: 'สร้างโรงพยาบาลสำเร็จ' },
                     hospital: { $ref: '#/components/schemas/Hospital' },
                   },
                 },
@@ -627,7 +802,7 @@ export const openApiDocument = {
     '/api/hospitals/{id}': {
       get: {
         tags: ['Hospitals'],
-        summary: 'Get a hospital by id',
+        summary: 'ดึงรายละเอียดโรงพยาบาล/คลินิกตาม ID',
         parameters: [
           {
             name: 'id',
@@ -638,7 +813,7 @@ export const openApiDocument = {
         ],
         responses: {
           200: {
-            description: 'Hospital found',
+            description: 'พบโรงพยาบาล/คลินิก',
             content: {
               'application/json': {
                 schema: {
@@ -651,7 +826,7 @@ export const openApiDocument = {
             },
           },
           404: {
-            description: 'Hospital not found',
+            description: 'ไม่พบโรงพยาบาล/คลินิก',
             content: {
               'application/json': {
                 schema: { $ref: '#/components/schemas/ErrorResponse' },
@@ -662,7 +837,7 @@ export const openApiDocument = {
       },
       put: {
         tags: ['Hospitals'],
-        summary: 'Update a hospital',
+        summary: 'แก้ไขข้อมูลโรงพยาบาล/คลินิก',
         parameters: [
           {
             name: 'id',
@@ -681,13 +856,13 @@ export const openApiDocument = {
         },
         responses: {
           200: {
-            description: 'Hospital updated',
+            description: 'แก้ไขโรงพยาบาลสำเร็จ',
           },
         },
       },
       delete: {
         tags: ['Hospitals'],
-        summary: 'Delete a hospital',
+        summary: 'ลบโรงพยาบาล/คลินิก',
         parameters: [
           {
             name: 'id',
@@ -698,7 +873,7 @@ export const openApiDocument = {
         ],
         responses: {
           200: {
-            description: 'Hospital deleted',
+            description: 'ลบโรงพยาบาลสำเร็จ',
           },
         },
       },
@@ -706,7 +881,7 @@ export const openApiDocument = {
     '/api/hospitals/{id}/logo': {
       post: {
         tags: ['Hospitals'],
-        summary: 'Update a hospital logo URL',
+        summary: 'อัปเดตรูปโลโก้โรงพยาบาล',
         parameters: [
           {
             name: 'id',
@@ -725,7 +900,7 @@ export const openApiDocument = {
         },
         responses: {
           200: {
-            description: 'Logo updated',
+            description: 'อัปเดตรูปโลโก้สำเร็จ',
           },
         },
       },
@@ -733,7 +908,7 @@ export const openApiDocument = {
     '/api/doctors': {
       get: {
         tags: ['Doctors'],
-        summary: 'List doctors',
+        summary: 'ดึงรายชื่อแพทย์',
         parameters: [
           {
             name: 'hospitalId',
@@ -744,7 +919,7 @@ export const openApiDocument = {
         ],
         responses: {
           200: {
-            description: 'Doctor list',
+            description: 'รายการแพทย์',
             content: {
               'application/json': {
                 schema: {
@@ -763,7 +938,7 @@ export const openApiDocument = {
       },
       post: {
         tags: ['Doctors'],
-        summary: 'Create a doctor',
+        summary: 'เพิ่มข้อมูลแพทย์ใหม่',
         requestBody: {
           required: true,
           content: {
@@ -774,7 +949,7 @@ export const openApiDocument = {
         },
         responses: {
           201: {
-            description: 'Doctor created',
+            description: 'สร้างข้อมูลแพทย์สำเร็จ',
           },
         },
       },
@@ -782,7 +957,7 @@ export const openApiDocument = {
     '/api/doctors/{id}': {
       get: {
         tags: ['Doctors'],
-        summary: 'Get a doctor by id',
+        summary: 'ดึงข้อมูลแพทย์ตาม ID',
         parameters: [
           {
             name: 'id',
@@ -792,13 +967,13 @@ export const openApiDocument = {
           },
         ],
         responses: {
-          200: { description: 'Doctor found' },
-          404: { description: 'Doctor not found' },
+          200: { description: 'พบแพทย์' },
+          404: { description: 'ไม่พบแพทย์' },
         },
       },
       put: {
         tags: ['Doctors'],
-        summary: 'Update a doctor',
+        summary: 'แก้ไขข้อมูลแพทย์',
         parameters: [
           {
             name: 'id',
@@ -816,12 +991,12 @@ export const openApiDocument = {
           },
         },
         responses: {
-          200: { description: 'Doctor updated' },
+          200: { description: 'แก้ไขข้อมูลแพทย์สำเร็จ' },
         },
       },
       delete: {
         tags: ['Doctors'],
-        summary: 'Delete a doctor',
+        summary: 'ลบแพทย์',
         parameters: [
           {
             name: 'id',
@@ -831,14 +1006,14 @@ export const openApiDocument = {
           },
         ],
         responses: {
-          200: { description: 'Doctor deleted' },
+          200: { description: 'ลบแพทย์สำเร็จ' },
         },
       },
     },
     '/api/doctors/{id}/image': {
       post: {
         tags: ['Doctors'],
-        summary: 'Upload a doctor profile image',
+        summary: 'อัปโหลดรูปภาพโปรไฟล์แพทย์',
         parameters: [
           {
             name: 'id',
@@ -858,7 +1033,7 @@ export const openApiDocument = {
                   image: {
                     type: 'string',
                     format: 'binary',
-                    description: 'Image file (jpg, png, webp, etc.) — max 2MB',
+                    description: 'ไฟล์รูปภาพ (jpg, png, webp, ฯลฯ) ขนาดไม่เกิน 2MB',
                   },
                 },
               },
@@ -867,40 +1042,40 @@ export const openApiDocument = {
         },
         responses: {
           200: {
-            description: 'Doctor image updated',
+            description: 'อัปเดตรูปแพทย์สำเร็จ',
             content: {
               'application/json': {
                 schema: {
                   type: 'object',
                   properties: {
-                    message: { type: 'string', example: 'Doctor image updated' },
+                    message: { type: 'string', example: 'อัปเดตรูปแพทย์สำเร็จ' },
                     doctor: { $ref: '#/components/schemas/Doctor' },
                   },
                 },
               },
             },
           },
-          400: { description: 'No file provided or file too large / wrong type' },
-          404: { description: 'Doctor not found' },
+          400: { description: 'ไม่มีไฟล์หรือไฟล์ขนาดใหญ่เกิน/ประเภทไม่ถูกต้อง' },
+          404: { description: 'ไม่พบแพทย์' },
         },
       },
     },
     '/api/appointments': {
       get: {
         tags: ['Appointments'],
-        summary: 'List appointments',
+        summary: 'ดึงรายการนัดหมาย',
         parameters: [
           {
             name: 'userId',
             in: 'query',
             required: false,
             schema: { type: 'integer' },
-            description: 'Filter appointments by patient id',
+            description: 'กรองนัดหมายตามรหัสผู้ป่วย',
           },
         ],
         responses: {
           200: {
-            description: 'Appointment list',
+            description: 'รายการนัดหมาย',
             content: {
               'application/json': {
                 schema: {
@@ -914,7 +1089,7 @@ export const openApiDocument = {
       },
       post: {
         tags: ['Appointments'],
-        summary: 'Create a new appointment',
+        summary: 'สร้างนัดหมายใหม่',
         requestBody: {
           required: true,
           content: {
@@ -925,13 +1100,13 @@ export const openApiDocument = {
         },
         responses: {
           201: {
-            description: 'Appointment created',
+            description: 'สร้างนัดหมายสำเร็จ',
             content: {
               'application/json': {
                 schema: {
                   type: 'object',
                   properties: {
-                    message: { type: 'string', example: 'Appointment created' },
+                    message: { type: 'string', example: 'สร้างนัดหมายสำเร็จ' },
                     appointment: { $ref: '#/components/schemas/Appointment' },
                   },
                 },
@@ -939,7 +1114,7 @@ export const openApiDocument = {
             },
           },
           400: {
-            description: 'Missing required fields',
+            description: 'ข้อมูลจำเป็นบางอย่างหายไป',
             content: {
               'application/json': {
                 schema: { $ref: '#/components/schemas/ErrorResponse' },

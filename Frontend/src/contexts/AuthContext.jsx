@@ -16,7 +16,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState(sessionStorage.getItem('token'));
 
-  const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim();
+  const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000').trim();
 
   const clearStoredSession = () => {
     localStorage.removeItem('users');
@@ -65,7 +65,7 @@ export const AuthProvider = ({ children }) => {
             ...rawUser,
             idCard: rawUser.id_card || rawUser.idCard || '',
             healthProfile: {
-              dob: rawUser.date_of_birth || '',
+              dob: rawUser.date_of_birth || rawUser.dateOfBirth || '',
               age: rawUser.age || '',
               gender: rawUser.gender || '',
               height: rawUser.height || '',
@@ -112,7 +112,7 @@ export const AuthProvider = ({ children }) => {
         ...rawUser,
         idCard: rawUser.id_card || rawUser.idCard || '',
         healthProfile: {
-          dob: rawUser.date_of_birth || '',
+          dob: rawUser.date_of_birth || rawUser.dateOfBirth || '',
           age: rawUser.age || '',
           gender: rawUser.gender || '',
           height: rawUser.height || '',
@@ -129,7 +129,13 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       const fallbackMessage = !error.response
         ? 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ กรุณาเปิด Backend ที่พอร์ต 5000 แล้วลองใหม่'
-        : 'Login failed';
+        : `${error.response.status} ${error.response.statusText} ${error.config?.url || ''}`;
+
+      console.error('Login error details:', {
+        response: error.response?.data,
+        status: error.response?.status,
+        url: error.config?.url,
+      });
 
       return {
         success: false,
@@ -207,6 +213,42 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const fetchAdminUserList = async () => {
+    try {
+      const response = await axios.get('/api/user/list');
+      return {
+        success: true,
+        users: response.data?.users || response.data || [],
+      };
+    } catch (error) {
+      const fallbackMessage = !error.response
+        ? 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ กรุณาลองใหม่'
+        : 'ไม่สามารถดึงรายชื่อผู้ใช้ได้';
+      return {
+        success: false,
+        error: error.response?.data?.error || fallbackMessage,
+      };
+    }
+  };
+
+  const updateUserRole = async (userId, role) => {
+    try {
+      const response = await axios.put(`/api/user/${userId}/role`, { role });
+      return {
+        success: true,
+        user: response.data?.user || null,
+      };
+    } catch (error) {
+      const fallbackMessage = !error.response
+        ? 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ กรุณาลองใหม่'
+        : 'ไม่สามารถอัปเดตบทบาทผู้ใช้ได้';
+      return {
+        success: false,
+        error: error.response?.data?.error || fallbackMessage,
+      };
+    }
+  };
+
   const value = {
     user,
     token,
@@ -217,6 +259,8 @@ export const AuthProvider = ({ children }) => {
     updateUser,
     changePassword,
     deleteAccount,
+    fetchAdminUserList,
+    updateUserRole,
     isAuthenticated: !!user,
     isAdmin: (user?.role || '').toLowerCase() === 'admin',
     isPatient: (user?.role || '').toLowerCase() === 'patient'

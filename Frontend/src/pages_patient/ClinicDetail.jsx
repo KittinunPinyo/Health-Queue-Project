@@ -2129,7 +2129,7 @@ function ClinicDetail() {
     };
 
     return (
-        <div className="page active" style={{ paddingTop: '72px', paddingBottom: '88px' }}>
+        <div className="page active" style={{ paddingTop: '32px', paddingBottom: '88px' }}>
             <main style={styles.container}>
                 <div style={styles.header}>
                     <h1 style={styles.title}>{t('makeAppointment')}</h1>

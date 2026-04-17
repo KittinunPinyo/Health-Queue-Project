@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 
 function ProfileAdmin() {
     const navigate = useNavigate();
-    const { logout } = useAuth();
+    const { user, logout } = useAuth();
 
     // --- Event Handlers ---
     const handleAddAdmin = (e) => {
@@ -33,16 +33,15 @@ function ProfileAdmin() {
                 <div className="card patient-profile-card" style={{ background: 'var(--dark-color)', color: 'white' }}>
                     <div className="patient-card-header">
                         <div>
-                            {/* (ในอนาคต ควรอ่านจาก currentUser) */}
-                            <h3 id="admin-card-name">Admin User</h3>
-                            <p id="admin-card-email" style={{color: '#ccc'}}>admin@admin.com</p>
+                            <h3 id="admin-card-name">{user?.name || 'Admin User'}</h3>
+                            <p id="admin-card-email" style={{color: '#ccc'}}>{user?.email || 'admin@admin.com'}</p>
                         </div>
                     </div>
                     <hr />
                     <div className="profile-info-grid">
                         <div>
                             <small style={{color: '#ccc'}}>ตำแหน่ง</small>
-                            <p>ผู้ดูแลระบบ</p>
+                            <p>{user?.role === 'admin' ? 'ผู้ดูแลระบบ' : 'ผู้ใช้'}</p>
                         </div>
                         <div>
                             <small style={{color: '#ccc'}}>สถานะ</small>

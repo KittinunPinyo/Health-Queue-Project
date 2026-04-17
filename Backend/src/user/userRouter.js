@@ -40,12 +40,8 @@ function verifyToken(token, jwtSecret) {
 
 export { hashPassword };
 
-// สร้าง router ของกลุ่ม API ผู้ใช้ (register/login/profile/logout)
-export function createUserRouter({ dbGet, dbInsert, dbRun, jwtSecret }) {
-  const router = Router();
-
-  // middleware ตรวจ token สำหรับ endpoint ที่ต้องล็อกอิน
-  const authenticateToken = (req, res, next) => {
+function createAuthenticateToken(jwtSecret) {
+  return (req, res, next) => {
     const authHeader = req.headers.authorization;
     const token = authHeader && authHeader.split(' ')[1];
 
@@ -61,6 +57,27 @@ export function createUserRouter({ dbGet, dbInsert, dbRun, jwtSecret }) {
     req.user = decoded;
     next();
   };
+}
+
+function createAuthorizeAdmin() {
+  return (req, res, next) => {
+    if (req.user?.role !== 'admin') {
+      return res.status(403).json({ error: 'Admin privileges required' });
+    }
+    next();
+  };
+}
+
+const getAllUsers = async (dbAll) => {
+  return dbAll(
+    `SELECT id, name, email, phone, role, id_card, date_of_birth, age, gender, height, weight, medical_conditions, allergies
+     FROM users
+     ORDER BY id ASC`
+  );
+};
+
+export function createAuthRouter({ dbGet, dbInsert, jwtSecret }) {
+  const router = Router();
 
   const registerUser = async (userData) => {
     const {
@@ -78,7 +95,6 @@ export function createUserRouter({ dbGet, dbInsert, dbRun, jwtSecret }) {
       allergies,
     } = userData;
 
-    // กันข้อมูลซ้ำด้วย email หรือเลขบัตรประชาชน
     const existingUser = await dbGet('SELECT id FROM users WHERE email = ? OR id_card = ?', [email, idCard]);
     if (existingUser) {
       throw new Error('User already exists with this email or ID card');
@@ -105,10 +121,59 @@ export function createUserRouter({ dbGet, dbInsert, dbRun, jwtSecret }) {
     const valid = await verifyPassword(password, user.password);
     if (!valid) throw new Error('Invalid password');
 
-    // ไม่ส่ง password กลับให้ client
     const { password: _, ...userWithoutPassword } = user;
     return userWithoutPassword;
   };
+
+  router.post('/register', async (req, res) => {
+    try {
+      const user = await registerUser(req.body);
+      res.status(201).json({ message: 'User registered successfully', user });
+    } catch (error) {
+      console.error('Registration error:', error);
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  router.post('/login', async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      const user = await loginUser(email, password);
+      const token = generateToken(user, jwtSecret);
+      res.json({ message: 'Login successful', user, token });
+    } catch (error) {
+      console.error('Login error:', error);
+      res.status(401).json({ error: error.message });
+    }
+  });
+
+  router.post('/logout', createAuthenticateToken(jwtSecret), (req, res) => {
+    res.json({ message: 'Logged out successfully' });
+  });
+
+  router.get('/profile', createAuthenticateToken(jwtSecret), async (req, res) => {
+    try {
+      const user = await dbGet(
+        'SELECT id, name, email, phone, role, id_card, date_of_birth, age, gender, height, weight, medical_conditions, allergies FROM users WHERE id = ?',
+        [req.user.id]
+      );
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      return res.json({ user });
+    } catch (error) {
+      console.error('Auth profile error:', error);
+      return res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  return router;
+}
+
+export function createUserRouter({ dbGet, dbAll, dbRun, jwtSecret }) {
+  const router = Router();
+  const authenticateToken = createAuthenticateToken(jwtSecret);
+  const authorizeAdmin = createAuthorizeAdmin();
 
   const getUserById = async (id) => {
     return dbGet(
@@ -142,16 +207,6 @@ export function createUserRouter({ dbGet, dbInsert, dbRun, jwtSecret }) {
       throw new Error('Name is required');
     }
 
-    const nextPhone = toNullableString(payload.phone, existing.phone);
-    const nextIdCard = toNullableString(payload.idCard, existing.id_card);
-    const nextDob = toNullableString(payload.dateOfBirth, existing.date_of_birth);
-    const nextAge = toNullableNumber(payload.age, existing.age);
-    const nextGender = toNullableString(payload.gender, existing.gender);
-    const nextHeight = toNullableNumber(payload.height, existing.height);
-    const nextWeight = toNullableNumber(payload.weight, existing.weight);
-    const nextConditions = toNullableString(payload.medicalConditions, existing.medical_conditions);
-    const nextAllergies = toNullableString(payload.allergies, existing.allergies);
-
     await dbRun(
       `UPDATE users
        SET name = ?,
@@ -167,16 +222,16 @@ export function createUserRouter({ dbGet, dbInsert, dbRun, jwtSecret }) {
            updated_at = CURRENT_TIMESTAMP
        WHERE id = ?`,
       [
-        nextName,
-        nextPhone,
-        nextIdCard,
-        nextDob,
-        nextAge,
-        nextGender,
-        nextHeight,
-        nextWeight,
-        nextConditions,
-        nextAllergies,
+        toNullableString(payload.name, existing.name),
+        toNullableString(payload.phone, existing.phone),
+        toNullableString(payload.idCard, existing.id_card),
+        toNullableString(payload.dateOfBirth, existing.date_of_birth),
+        toNullableNumber(payload.age, existing.age),
+        toNullableString(payload.gender, existing.gender),
+        toNullableNumber(payload.height, existing.height),
+        toNullableNumber(payload.weight, existing.weight),
+        toNullableString(payload.medicalConditions, existing.medical_conditions),
+        toNullableString(payload.allergies, existing.allergies),
         id,
       ]
     );
@@ -204,43 +259,58 @@ export function createUserRouter({ dbGet, dbInsert, dbRun, jwtSecret }) {
     }
 
     const nextHashed = await hashPassword(newPassword);
-    await dbRun(
-      'UPDATE users SET password = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-      [nextHashed, id]
-    );
+    await dbRun('UPDATE users SET password = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [nextHashed, id]);
   };
 
   const deleteUserAccount = async (id) => {
-    // ลบข้อมูลนัดหมายที่ผูกกับผู้ใช้ก่อน เพื่อไม่ชน foreign key
     await dbRun('DELETE FROM appointments WHERE user_id = ?', [id]);
     await dbRun('DELETE FROM users WHERE id = ?', [id]);
   };
 
-  // สมัครสมาชิกผู้ใช้ใหม่
-  router.post('/register', async (req, res) => {
+  router.get('/list', authenticateToken, authorizeAdmin, async (req, res) => {
     try {
-      const user = await registerUser(req.body);
-      res.status(201).json({ message: 'User registered successfully', user });
+      const users = await getAllUsers(dbAll);
+      return res.json({ users });
     } catch (error) {
-      console.error('Registration error:', error);
-      res.status(400).json({ error: error.message });
+      console.error('GET /api/user/list error:', error);
+      return res.status(500).json({ error: 'Unable to fetch users' });
     }
   });
 
-  // เข้าสู่ระบบและส่ง token กลับ
-  router.post('/login', async (req, res) => {
+  router.get('/:id', authenticateToken, authorizeAdmin, async (req, res) => {
     try {
-      const { email, password } = req.body;
-      const user = await loginUser(email, password);
-      const token = generateToken(user, jwtSecret);
-      res.json({ message: 'Login successful', user, token });
+      const user = await getUserById(req.params.id);
+      if (!user) return res.status(404).json({ error: 'User not found' });
+      return res.json({ user });
     } catch (error) {
-      console.error('Login error:', error);
-      res.status(401).json({ error: error.message });
+      console.error('GET /api/user/:id error:', error);
+      return res.status(500).json({ error: 'Unable to fetch user' });
     }
   });
 
-  // ดึงข้อมูล profile ของผู้ใช้ที่ login อยู่
+  router.put('/:id/role', authenticateToken, authorizeAdmin, async (req, res) => {
+    try {
+      const { role } = req.body || {};
+      const allowedRoles = ['patient', 'doctor', 'admin'];
+
+      if (!role || typeof role !== 'string' || !allowedRoles.includes(role)) {
+        return res.status(400).json({ error: 'Role must be one of patient, doctor, admin' });
+      }
+
+      const existing = await dbGet('SELECT id FROM users WHERE id = ?', [req.params.id]);
+      if (!existing) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      await dbRun('UPDATE users SET role = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [role, req.params.id]);
+      const updated = await getUserById(req.params.id);
+      return res.json({ message: 'User role updated', user: updated });
+    } catch (error) {
+      console.error('PUT /api/user/:id/role error:', error);
+      return res.status(500).json({ error: 'Unable to update role' });
+    }
+  });
+
   router.get('/profile', authenticateToken, async (req, res) => {
     try {
       const user = await getUserById(req.user.id);
@@ -252,12 +322,6 @@ export function createUserRouter({ dbGet, dbInsert, dbRun, jwtSecret }) {
     }
   });
 
-  // endpoint ออกจากระบบ (ฝั่งนี้ตอบสถานะสำเร็จ)
-  router.post('/logout', (req, res) => {
-    res.json({ message: 'Logged out successfully' });
-  });
-
-  // แก้ไขชื่อ/เบอร์โทรของผู้ใช้ที่ล็อกอินอยู่
   router.put('/profile', authenticateToken, async (req, res) => {
     try {
       const user = await updateUserProfile(req.user.id, req.body || {});
@@ -269,7 +333,6 @@ export function createUserRouter({ dbGet, dbInsert, dbRun, jwtSecret }) {
     }
   });
 
-  // เปลี่ยนรหัสผ่าน (ใช้ bcrypt)
   router.put('/password', authenticateToken, async (req, res) => {
     try {
       const { currentPassword, newPassword } = req.body || {};
@@ -281,7 +344,6 @@ export function createUserRouter({ dbGet, dbInsert, dbRun, jwtSecret }) {
     }
   });
 
-  // ลบบัญชีผู้ใช้ที่ล็อกอินอยู่
   router.delete('/account', authenticateToken, async (req, res) => {
     try {
       await deleteUserAccount(req.user.id);

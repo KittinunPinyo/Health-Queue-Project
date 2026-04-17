@@ -70,10 +70,12 @@ function Profile() {
     useEffect(() => {
         const user = currentUser;
         const profile = user?.healthProfile || {};
+        const dobValue = profile.dob || profile.dateOfBirth || profile.date_of_birth || user?.dateOfBirth || user?.date_of_birth || '';
+
         setFormData({
             name: user?.name || '',
             idCard: user?.idCard || '', 
-            dob: profile.dob || '',
+            dob: dobValue,
             age: profile.age || '',
             gender: profile.gender || '',
             height: profile.height || '',
@@ -123,7 +125,7 @@ function Profile() {
                     ...rawUser,
                     idCard: rawUser.id_card || rawUser.idCard || '',
                     healthProfile: {
-                        dob: rawUser.date_of_birth || '',
+                        dob: rawUser.date_of_birth || rawUser.dateOfBirth || '',
                         age: rawUser.age || '',
                         gender: rawUser.gender || '',
                         height: rawUser.height || '',
@@ -598,11 +600,10 @@ function Profile() {
                                         <label style={styles.inputLabel} htmlFor="profile-gender">{t('gender')}</label>
                                         <select id="profile-gender" style={styles.input}
                                             value={formData.gender} onChange={handleFormChange}>
-                                            <option value="">-- {t('selectDoctorMethod') || t('gender')} --</option>
+                                            <option value="" disabled>-- {t('gender')} --</option>
                                             <option value="ชาย">{t('male')}</option>
                                             <option value="หญิง">{t('female')}</option>
                                             <option value="อื่นๆ">{t('other')}</option>
-                                            <option value="ไม่ระบุ">{t('notSpecified')}</option>
                                         </select>
                                     </div>
                                     <div style={styles.inputGroup}>

@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import swaggerUi from 'swagger-ui-express';
-import { createUserRouter, hashPassword } from './userRouter.js';
+import { createAuthRouter, createUserRouter, hashPassword } from './userRouter.js';
 import { openApiDocument } from './swagger.js';
 import { createHospitalsRouter } from '../hospitals/hospitalsRouter.js';
 import { createDoctorsRouter } from '../doctors/doctorsRouter.js';
@@ -181,10 +181,10 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openApiDocument, {
   explorer: true,
   customSiteTitle: 'Health Queue API Docs',
 }));
-// รวมกลุ่ม API login/register/profile ไว้ที่ /api/auth
-app.use('/api/auth', createUserRouter({ dbGet, dbInsert, dbRun, jwtSecret: JWT_SECRET }));
-// รองรับเส้นทางชุด user management ตามสเปคใหม่
-app.use('/api/user', createUserRouter({ dbGet, dbInsert, dbRun, jwtSecret: JWT_SECRET }));
+// รวมกลุ่ม API authentication ไว้ที่ /api/auth
+app.use('/api/auth', createAuthRouter({ dbGet, dbInsert, jwtSecret: JWT_SECRET }));
+// รองรับเส้นทางชุด user management และ admin users
+app.use('/api/user', createUserRouter({ dbGet, dbAll, dbRun, jwtSecret: JWT_SECRET }));
 // รวมกลุ่ม API hospitals ตามรูปตัวอย่าง
 app.use('/api/hospitals', createHospitalsRouter({ dbGet, dbAll, dbRun, dbInsert }));
 // รวมกลุ่ม API doctors ตามรูปตัวอย่าง

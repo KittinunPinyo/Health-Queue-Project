@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
-// (CSS ถูก import ใน main.jsx แล้ว)
+import './MyAppointments.css';
 
 // (Component: Modal รายละเอียด)
 function AppointmentDetailModal({ appointment, user, isOpen, onClose }) {
@@ -221,21 +220,25 @@ function MyAppointments() {
     };
 
     const renderCard = (a) => {
-        let statusHtml = '';
+        let statusText = '';
+        let statusIcon = null;
         let cardClass = '';
 
         switch(a.status) {
             case 'confirmed':
                 cardClass = 'status-confirmed';
-                statusHtml = <h3><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> {t('confirmed')}</h3>;
+                statusText = t('confirmed');
+                statusIcon = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>;
                 break;
             case 'rejected':
                 cardClass = 'status-rejected';
-                statusHtml = <h3><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg> {t('rejected')}</h3>;
+                statusText = t('rejected');
+                statusIcon = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>;
                 break;
             default: // 'new' or 'approved'
                 cardClass = 'status-pending';
-                statusHtml = <h3><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> {t('pending')}</h3>;
+                statusText = t('pending');
+                statusIcon = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>;
                 break;
         }
 
@@ -246,13 +249,17 @@ function MyAppointments() {
                 onClick={() => handleViewDetail(a.id)}
                 style={{cursor: 'pointer'}}
             >
-                {statusHtml}
-                <p><strong>{t('doctor')}:</strong> {a.selectedDoctor || a.doctor?.name || '-'}</p>
-                <p><strong>{t('clinic')}:</strong> {a.clinic?.name || '-'}</p>
-                <p><strong>{t('dateTime')}:</strong> {a.date} {t('time')} {a.time}</p>
-                {a.status === 'rejected' && (
-                    <p><strong>{t('reason')}:</strong> {a.rejectionReason.substring(0, 50)}...</p>
-                )}
+                <div className="card-main">
+                    <h3 className="card-title">{a.selectedDoctor || a.doctor?.name || '-'}</h3>
+                    <p><strong>{t('clinic')}:</strong> {a.clinic?.name || '-'}</p>
+                    <p><strong>{t('dateTime')}:</strong> {a.date} {t('time')} {a.time}</p>
+                    {a.status === 'rejected' && (
+                        <p><strong>{t('reason')}:</strong> {a.rejectionReason?.substring(0, 50) || '-'}...</p>
+                    )}
+                </div>
+                <div className="card-status">
+                    <span className="status-pill">{statusIcon}{statusText}</span>
+                </div>
             </div>
         );
     };
@@ -261,41 +268,67 @@ function MyAppointments() {
     return (
         <>
             {/* (Layout จะใส่ Header ให้) */}
-            <div id="page-myappointments" className="page active" style={{ paddingTop: '72px', paddingBottom: '88px' }}>
-                <main className="container" id="appointments-list">
-                    {!backendAvailable && (
-                        <div style={{
-                            padding: '0.75rem 1rem',
-                            marginBottom: '1rem',
-                            borderRadius: '12px',
-                            backgroundColor: '#fef3f3',
-                            border: '1px solid #f4c7c3',
-                            color: '#a61a1a'
-                        }}>
-                            {t('backendUnavailableNotice') || 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ ระบบจะใช้ข้อมูลจากเครื่องเท่านั้น'}
+            <div id="page-myappointments" className="page active myappointments-page" style={{ paddingTop: '72px', paddingBottom: '88px' }}>
+                <main className="appointments-container" id="appointments-list">
+                    <section className="appointments-hero">
+                        <div className="hero-icon">🩺</div>
+                        <div className="appointments-hero-content">
+                            <div className="appointments-chip">{t('myAppointments')}</div>
+                            <h2 className="appointments-hero-title">{t('myAppointments') || 'การนัดหมายของฉัน'}</h2>
+                            <p className="appointments-hero-desc">ติดตามสถานะการนัดหมายของคุณ ดูการนัดหมายที่กำลังรอและประวัติการเข้ารับบริการในที่เดียว</p>
+                            <div className="hero-stats">
+                                <div className="stat-card">
+                                    <strong>{upcomingAppointments.length}</strong>
+                                    <span>{t('pendingAppointments') || 'นัดหมายรอดำเนินการ'}</span>
+                                </div>
+                                <div className="stat-card">
+                                    <strong>{historyAppointments.length}</strong>
+                                    <span>{t('appointmentHistory') || 'ประวัติการนัดหมาย'}</span>
+                                </div>
+                            </div>
                         </div>
-                    )}
+                    </section>
 
-                    {myAppointments.length === 0 ? (
-                        <p className="text-center">{t('noAppointments')}</p>
-                    ) : (
-                        <>
-                            {upcomingAppointments.length > 0 && (
-                                <>
-                                    <h3 className="appointment-list-header">{t('pendingAppointments')}</h3>
-                                    {upcomingAppointments.map(renderCard)}
-                                </>
-                            )}
-                            
-                            {historyAppointments.length > 0 && (
-                                <>
-                                    <h3 className="appointment-list-header">{t('appointmentHistory')}</h3>
-                                    {upcomingAppointments.length > 0 && <div className="appointment-divider"></div>}
-                                    {historyAppointments.map(renderCard)}
-                                </>
-                            )}
-                        </>
-                    )}
+                    <div className="appointments-main-panel">
+                        {!backendAvailable && (
+                            <div style={{
+                                padding: '0.75rem 1rem',
+                                marginBottom: '1rem',
+                                borderRadius: '12px',
+                                backgroundColor: '#fef3f3',
+                                border: '1px solid #f4c7c3',
+                                color: '#a61a1a'
+                            }}>
+                                {t('backendUnavailableNotice') || 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ ระบบจะใช้ข้อมูลจากเครื่องเท่านั้น'}
+                            </div>
+                        )}
+
+                        {myAppointments.length === 0 ? (
+                            <div className="empty-state">
+                                <strong>{t('noAppointments')}</strong>
+                                <p>{t('appointmentsEmptyMessage') || 'ยังไม่มีการนัดหมายในระบบ คุณสามารถจองคิวได้จากหน้าคลินิก'}</p>
+                            </div>
+                        ) : (
+                            <>
+                                {upcomingAppointments.length > 0 && (
+                                    <div className="pending-block">
+                                        <section className="appointment-section">
+                                            <h3 className="appointment-list-header">{t('pendingAppointments')}</h3>
+                                            {upcomingAppointments.map(renderCard)}
+                                        </section>
+                                    </div>
+                                )}
+
+                                {historyAppointments.length > 0 && (
+                                    <section className="appointment-section">
+                                        <h3 className="appointment-list-header">{t('appointmentHistory')}</h3>
+                                        {upcomingAppointments.length > 0 && <div className="appointment-divider"></div>}
+                                        {historyAppointments.map(renderCard)}
+                                    </section>
+                                )}
+                            </>
+                        )}
+                    </div>
                 </main>
             </div>
             
