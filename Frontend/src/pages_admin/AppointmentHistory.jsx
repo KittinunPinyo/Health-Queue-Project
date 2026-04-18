@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
+import axios from 'axios';
 
 // Icons
 const SearchIcon = () => (
@@ -32,9 +33,27 @@ const UserIcon = () => (
     </svg>
 );
 
+const normalizeStatus = (status) => {
+    const raw = String(status || '').trim().toLowerCase();
+
+    if (['new', 'pending', 'waiting', 'awaiting', 'รอยืนยัน'].includes(raw)) {
+        return 'pending';
+    }
+    if (['confirmed', 'confirm', 'approved', 'accepted', 'ยืนยัน', 'ยืนยันแล้ว'].includes(raw)) {
+        return 'confirmed';
+    }
+    if (['rejected', 'cancelled', 'canceled', 'declined', 'ปฏิเสธ', 'ยกเลิก'].includes(raw)) {
+        return 'rejected';
+    }
+
+    return 'pending';
+};
+
 function AppointmentHistory() {
     const { t } = useLanguage();
     const [appointments, setAppointments] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [loadError, setLoadError] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [dateFilter, setDateFilter] = useState('');
@@ -43,7 +62,7 @@ function AppointmentHistory() {
         loadAppointments();
     }, []);
 
-    const loadAppointments = () => {
+    const loadAppointmentsFromLocal = () => {
         // ดึงข้อมูลจากทั้ง requests และ appointments
         const storedRequests = JSON.parse(localStorage.getItem('requests')) || [];
         const storedAppointments = JSON.parse(localStorage.getItem('appointments')) || [];
@@ -58,7 +77,7 @@ function AppointmentHistory() {
             specialty: req.selectedSpecialty || req.specialty || '-',
             date: req.date,
             time: req.time,
-            status: req.status === 'new' ? 'pending' : (req.status || 'pending'),
+            status: normalizeStatus(req.status),
             createdAt: req.createdAt || new Date(req.id).toISOString(),
             source: 'requests'
         }));
@@ -70,7 +89,44 @@ function AppointmentHistory() {
         const sorted = allAppointments.sort((a, b) => 
             new Date(b.createdAt || b.date || b.id) - new Date(a.createdAt || a.date || a.id)
         );
-        setAppointments(sorted);
+        return sorted;
+    };
+
+    const loadAppointments = async () => {
+        setLoading(true);
+        setLoadError('');
+
+        try {
+            const response = await axios.get('/api/appointments');
+            const rawAppointments = Array.isArray(response.data) ? response.data : [];
+
+            const normalizedAppointments = rawAppointments.map((item) => ({
+                id: item.id,
+                patientName: item.patient?.name || item.patientName || 'ไม่ระบุ',
+                patientPhone: item.patient?.phone || item.patientPhone || '-',
+                clinicName: item.clinic?.name || item.clinicName || '-',
+                doctorName: item.selectedDoctor || item.doctorName || '-',
+                specialty: item.selectedSpecialty || item.specialty || '-',
+                date: item.date || '',
+                time: item.time || '',
+                status: normalizeStatus(item.status),
+                createdAt: item.createdAt || item.created_at || null,
+                source: 'api'
+            }));
+
+            const sorted = normalizedAppointments.sort((a, b) =>
+                new Date(b.createdAt || b.date || b.id) - new Date(a.createdAt || a.date || a.id)
+            );
+
+            setAppointments(sorted);
+        } catch (error) {
+            // Fallback to local data so the page remains usable when backend is unavailable.
+            const fallbackAppointments = loadAppointmentsFromLocal();
+            setAppointments(fallbackAppointments);
+            setLoadError(error.response?.data?.error || 'ไม่สามารถดึงข้อมูลนัดหมายจาก API ได้');
+        } finally {
+            setLoading(false);
+        }
     };
 
     const filteredAppointments = useMemo(() => {
@@ -79,24 +135,20 @@ function AppointmentHistory() {
         // Filter by search term
         if (searchTerm) {
             const term = searchTerm.toLowerCase();
+            const termDigits = searchTerm.replace(/\D/g, '');
             result = result.filter(apt => 
                 apt.patientName?.toLowerCase().includes(term) ||
                 apt.doctorName?.toLowerCase().includes(term) ||
                 apt.clinicName?.toLowerCase().includes(term) ||
                 apt.specialty?.toLowerCase().includes(term) ||
-                apt.id?.toString().includes(term) // ค้นหาด้วยรหัสนัดหมาย
+                apt.id?.toString().toLowerCase().includes(term) ||
+                (termDigits && apt.id?.toString().replace(/\D/g, '').includes(termDigits)) // ค้นหาด้วยรหัสนัดหมาย
             );
         }
 
         // Filter by status
         if (statusFilter !== 'all') {
-            if (statusFilter === 'pending') {
-                result = result.filter(apt => apt.status === 'pending' || apt.status === 'new');
-            } else if (statusFilter === 'cancelled') {
-                result = result.filter(apt => apt.status === 'cancelled' || apt.status === 'rejected');
-            } else {
-                result = result.filter(apt => apt.status === statusFilter);
-            }
+            result = result.filter((apt) => normalizeStatus(apt.status) === statusFilter);
         }
 
         // Filter by date
@@ -108,15 +160,14 @@ function AppointmentHistory() {
     }, [appointments, searchTerm, statusFilter, dateFilter]);
 
     const getStatusBadge = (status) => {
+        const normalizedStatus = normalizeStatus(status);
         const styles = {
             pending: { bg: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)', color: '#92400e', text: 'รอยืนยัน', icon: '⏳' },
-            new: { bg: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)', color: '#92400e', text: 'รอยืนยัน', icon: '⏳' },
             confirmed: { bg: 'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)', color: '#065f46', text: 'ยืนยันแล้ว', icon: '✓' },
-            completed: { bg: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)', color: '#1e40af', text: 'เสร็จสิ้น', icon: '✔' },
-            cancelled: { bg: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)', color: '#991b1b', text: 'ยกเลิก', icon: '✕' },
+            completed: { bg: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)', color: '#1e40af', text: 'ดำเนินการแล้ว', icon: '✔' },
             rejected: { bg: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)', color: '#991b1b', text: 'ปฏิเสธ', icon: '✕' },
         };
-        const style = styles[status] || styles.pending;
+        const style = styles[normalizedStatus] || styles.pending;
         return (
             <span style={{
                 padding: '6px 14px',
@@ -150,10 +201,9 @@ function AppointmentHistory() {
     const stats = useMemo(() => {
         return {
             total: appointments.length,
-            pending: appointments.filter(a => a.status === 'pending' || a.status === 'new').length,
-            confirmed: appointments.filter(a => a.status === 'confirmed').length,
-            completed: appointments.filter(a => a.status === 'completed').length,
-            cancelled: appointments.filter(a => a.status === 'cancelled' || a.status === 'rejected').length,
+            pending: appointments.filter(a => normalizeStatus(a.status) === 'pending').length,
+            confirmed: appointments.filter(a => normalizeStatus(a.status) === 'confirmed').length,
+            rejected: appointments.filter(a => normalizeStatus(a.status) === 'rejected').length,
         };
     }, [appointments]);
 
@@ -215,21 +265,6 @@ function AppointmentHistory() {
                             ดูสรุปสถานะนัดหมาย, ค้นหา และกรองตามวันที่ได้อย่างรวดเร็ว พร้อมข้อมูลที่เข้าใจง่าย.
                         </p>
                     </div>
-                </div>
-                <div style={{
-                    width: '56px', height: '56px', borderRadius: '16px',
-                    background: 'rgba(255,255,255,0.2)', display: 'flex',
-                    alignItems: 'center', justifyContent: 'center'
-                }}>
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-                        <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                </div>
-                <div>
-                    <h2 style={{ margin: 0, color: 'white', fontSize: '1.5rem', fontWeight: 700 }}>ประวัติการนัดหมาย</h2>
-                    <p style={{ margin: '0.25rem 0 0 0', color: 'rgba(255,255,255,0.8)', fontSize: '0.9rem' }}>
-                        ติดตามและจัดการนัดหมายทั้งหมดในระบบ
-                    </p>
                 </div>
             </div>
 
@@ -360,56 +395,14 @@ function AppointmentHistory() {
                     <div style={{ fontSize: '14px', opacity: 0.95, fontWeight: '600' }}>ยืนยันแล้ว</div>
                 </div>
                 
-                {/* Completed */}
-                <div 
-                    onClick={() => setStatusFilter('completed')}
-                    style={{ 
-                        background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)', 
-                        padding: '24px', 
-                        borderRadius: '20px', 
-                        boxShadow: statusFilter === 'completed' ? '0 0 0 4px rgba(59, 130, 246, 0.5), 0 8px 25px rgba(59, 130, 246, 0.35)' : '0 8px 25px rgba(59, 130, 246, 0.35)',
-                        color: 'white',
-                        position: 'relative',
-                        overflow: 'hidden',
-                        transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-                        cursor: 'pointer'
-                    }}
-                    className="stat-card"
-                >
-                    <div style={{ 
-                        position: 'absolute', 
-                        right: '-20px', 
-                        top: '-20px', 
-                        width: '100px', 
-                        height: '100px', 
-                        background: 'rgba(255,255,255,0.1)', 
-                        borderRadius: '50%' 
-                    }}></div>
-                    <div style={{ 
-                        position: 'absolute', 
-                        right: '20px', 
-                        bottom: '15px', 
-                        opacity: 0.3
-                    }}>
-                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5">
-                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                            <polyline points="14 2 14 8 20 8"></polyline>
-                            <line x1="16" y1="13" x2="8" y2="13"></line>
-                            <line x1="16" y1="17" x2="8" y2="17"></line>
-                        </svg>
-                    </div>
-                    <div style={{ fontSize: '48px', fontWeight: '800', marginBottom: '4px', position: 'relative' }}>{stats.completed}</div>
-                    <div style={{ fontSize: '14px', opacity: 0.95, fontWeight: '600' }}>เสร็จสิ้น</div>
-                </div>
-                
                 {/* Cancelled */}
                 <div 
-                    onClick={() => setStatusFilter('cancelled')}
+                    onClick={() => setStatusFilter('rejected')}
                     style={{ 
                         background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)', 
                         padding: '24px', 
                         borderRadius: '20px', 
-                        boxShadow: statusFilter === 'cancelled' ? '0 0 0 4px rgba(239, 68, 68, 0.5), 0 8px 25px rgba(239, 68, 68, 0.35)' : '0 8px 25px rgba(239, 68, 68, 0.35)',
+                        boxShadow: statusFilter === 'rejected' ? '0 0 0 4px rgba(239, 68, 68, 0.5), 0 8px 25px rgba(239, 68, 68, 0.35)' : '0 8px 25px rgba(239, 68, 68, 0.35)',
                         color: 'white',
                         position: 'relative',
                         overflow: 'hidden',
@@ -439,7 +432,7 @@ function AppointmentHistory() {
                             <line x1="9" y1="9" x2="15" y2="15"></line>
                         </svg>
                     </div>
-                    <div style={{ fontSize: '48px', fontWeight: '800', marginBottom: '4px', position: 'relative' }}>{stats.cancelled}</div>
+                    <div style={{ fontSize: '48px', fontWeight: '800', marginBottom: '4px', position: 'relative' }}>{stats.rejected}</div>
                     <div style={{ fontSize: '14px', opacity: 0.95, fontWeight: '600' }}>ปฏิเสธ</div>
                 </div>
             </div>
@@ -522,8 +515,7 @@ function AppointmentHistory() {
                         <option value="all">สถานะทั้งหมด</option>
                         <option value="pending">รอยืนยัน</option>
                         <option value="confirmed">ยืนยันแล้ว</option>
-                        <option value="completed">เสร็จสิ้น</option>
-                        <option value="cancelled">ยกเลิก</option>
+                        <option value="rejected">ปฏิเสธ</option>
                     </select>
 
                     {/* Date Filter */}
@@ -575,6 +567,12 @@ function AppointmentHistory() {
             </div>
 
             {/* Appointments Table */}
+            {loadError && (
+                <div style={{ marginBottom: '16px', padding: '12px 16px', borderRadius: '10px', background: '#fee2e2', color: '#991b1b' }}>
+                    {loadError}
+                </div>
+            )}
+
             <div style={{ 
                 background: 'white', 
                 borderRadius: '28px', 
@@ -652,7 +650,13 @@ function AppointmentHistory() {
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredAppointments.length === 0 ? (
+                            {loading ? (
+                                <tr>
+                                    <td colSpan="7" style={{ padding: '40px 20px', textAlign: 'center', color: '#64748b' }}>
+                                        กำลังโหลดข้อมูลนัดหมายจาก API...
+                                    </td>
+                                </tr>
+                            ) : filteredAppointments.length === 0 ? (
                                 <tr>
                                     <td colSpan="7" style={{ padding: '80px 20px', textAlign: 'center', color: '#9ca3af' }}>
                                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
@@ -700,7 +704,12 @@ function AppointmentHistory() {
                                                 fontSize: '13px',
                                                 color: '#475569'
                                             }}>
-                                                #{apt.id?.toString().slice(-6) || String(index + 1).padStart(6, '0')}
+                                                {(() => {
+                                                    const onlyDigits = apt.id?.toString().replace(/\D/g, '') || '';
+                                                    return onlyDigits.length >= 6
+                                                        ? onlyDigits.slice(-6)
+                                                        : String(index + 1).padStart(6, '0');
+                                                })()}
                                             </span>
                                         </td>
                                         <td style={{ padding: '18px 20px', textAlign: 'center' }}>

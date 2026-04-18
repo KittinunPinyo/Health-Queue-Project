@@ -277,9 +277,40 @@ export function createUserRouter({ dbGet, dbAll, dbRun, jwtSecret }) {
     }
   });
 
+  router.get('/search-by-condition', authenticateToken, authorizeAdmin, async (req, res) => {
+    try {
+      const rawCondition = String(req.query.condition || '').trim();
+      if (!rawCondition) {
+        return res.status(400).json({ error: 'condition query is required' });
+      }
+
+      const escapedTerm = rawCondition.replace(/[%_]/g, '\\$&');
+      const users = await dbAll(
+        `SELECT id, name, email, phone, role, id_card, date_of_birth, age, gender, height, weight, medical_conditions, allergies
+         FROM users
+         WHERE role = 'patient'
+           AND medical_conditions IS NOT NULL
+           AND TRIM(medical_conditions) <> ''
+           AND medical_conditions ILIKE ? ESCAPE '\\'
+         ORDER BY id ASC`,
+        [`%${escapedTerm}%`]
+      );
+
+      return res.json({ users, total: users.length, condition: rawCondition });
+    } catch (error) {
+      console.error('GET /api/user/search-by-condition error:', error);
+      return res.status(500).json({ error: 'Unable to search users by condition' });
+    }
+  });
+
   router.get('/:id', authenticateToken, authorizeAdmin, async (req, res) => {
     try {
-      const user = await getUserById(req.params.id);
+      const id = Number(req.params.id);
+      if (!Number.isInteger(id) || id <= 0) {
+        return res.status(400).json({ error: 'Invalid user id' });
+      }
+
+      const user = await getUserById(id);
       if (!user) return res.status(404).json({ error: 'User not found' });
       return res.json({ user });
     } catch (error) {

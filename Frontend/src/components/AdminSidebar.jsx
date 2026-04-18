@@ -137,30 +137,31 @@ function AdminSidebar() {
                         top: 0;
                         bottom: 0;
                         width: 280px;
-                        background: linear-gradient(180deg, #1e1b4b 0%, #312e81 100%);
+                        background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
                         display: flex;
                         flex-direction: column;
                         z-index: 1001;
-                        box-shadow: 4px 0 20px rgba(0,0,0,0.15);
+                        border-right: 2px solid #bfdbfe;
+                        box-shadow: 6px 0 22px rgba(37, 99, 235, 0.08);
                         overflow: hidden;
                     }
 
                     .sidebar-header {
                         padding: 28px 24px;
-                        border-bottom: 1px solid rgba(255,255,255,0.1);
+                        border-bottom: 1px solid #dbeafe;
                     }
 
                     .sidebar-logo {
                         display: flex;
                         align-items: center;
                         gap: 12px;
-                        color: white;
+                        color: #0f172a;
                     }
 
                     .sidebar-logo-icon {
                         width: 48px;
                         height: 48px;
-                        background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%);
+                        background: linear-gradient(135deg, #2563eb 0%, #60a5fa 100%);
                         border-radius: 12px;
                         display: flex;
                         align-items: center;
@@ -171,7 +172,7 @@ function AdminSidebar() {
                     .sidebar-logo-text {
                         font-size: 20px;
                         font-weight: 700;
-                        color: white;
+                        color: #0f172a;
                     }
 
                     .sidebar-menu {
@@ -187,7 +188,7 @@ function AdminSidebar() {
                         align-items: center;
                         gap: 16px;
                         padding: 16px 18px;
-                        color: rgba(255,255,255,0.7);
+                        color: #334155;
                         text-decoration: none;
                         border-radius: 12px;
                         font-size: 16px;
@@ -201,13 +202,14 @@ function AdminSidebar() {
                     }
 
                     .sidebar-item:hover {
-                        background: rgba(255,255,255,0.1);
-                        color: white;
+                        background: #f0f7ff;
+                        color: #1d4ed8;
                     }
 
                     .sidebar-item.active {
-                        background: rgba(139, 92, 246, 0.3);
-                        color: white;
+                        background: #e8f1ff;
+                        color: #1d4ed8;
+                        border: 1px solid #bfdbfe;
                         font-weight: 600;
                     }
 
@@ -219,7 +221,7 @@ function AdminSidebar() {
                         transform: translateY(-50%);
                         width: 4px;
                         height: 28px;
-                        background: #a855f7;
+                        background: #3b82f6;
                         border-radius: 0 4px 4px 0;
                     }
 
@@ -234,7 +236,7 @@ function AdminSidebar() {
 
                     .sidebar-footer {
                         padding: 16px 12px;
-                        border-top: 1px solid rgba(255,255,255,0.1);
+                        border-top: 1px solid #dbeafe;
                     }
 
                     .logout-btn {
@@ -242,7 +244,7 @@ function AdminSidebar() {
                         align-items: center;
                         gap: 14px;
                         padding: 14px 16px;
-                        color: rgba(255,255,255,0.7);
+                        color: #334155;
                         text-decoration: none;
                         border-radius: 10px;
                         font-size: 15px;
@@ -256,8 +258,8 @@ function AdminSidebar() {
                     }
 
                     .logout-btn:hover {
-                        background: rgba(239, 68, 68, 0.2);
-                        color: #fca5a5;
+                        background: #eff6ff;
+                        color: #1d4ed8;
                     }
 
                     /* Submenu styles */
@@ -267,7 +269,7 @@ function AdminSidebar() {
                         justify-content: space-between;
                         gap: 16px;
                         padding: 16px 18px;
-                        color: rgba(255,255,255,0.7);
+                        color: #334155;
                         text-decoration: none;
                         border-radius: 12px;
                         font-size: 16px;
@@ -281,13 +283,14 @@ function AdminSidebar() {
                     }
 
                     .sidebar-parent:hover {
-                        background: rgba(255,255,255,0.1);
-                        color: white;
+                        background: #f0f7ff;
+                        color: #1d4ed8;
                     }
 
                     .sidebar-parent.active {
-                        background: rgba(139, 92, 246, 0.3);
-                        color: white;
+                        background: #e8f1ff;
+                        color: #1d4ed8;
+                        border: 1px solid #bfdbfe;
                         font-weight: 600;
                     }
 
@@ -309,7 +312,7 @@ function AdminSidebar() {
                         overflow: hidden;
                         transition: max-height 0.3s ease;
                         margin-left: 20px;
-                        border-left: 2px solid rgba(255,255,255,0.15);
+                        border-left: 2px solid #dbeafe;
                         padding-left: 12px;
                     }
 
@@ -318,7 +321,7 @@ function AdminSidebar() {
                         align-items: center;
                         gap: 12px;
                         padding: 12px 16px;
-                        color: rgba(255,255,255,0.6);
+                        color: #64748b;
                         text-decoration: none;
                         border-radius: 10px;
                         font-size: 14px;
@@ -328,13 +331,14 @@ function AdminSidebar() {
                     }
 
                     .sidebar-subitem:hover {
-                        background: rgba(255,255,255,0.08);
-                        color: white;
+                        background: #f0f7ff;
+                        color: #1d4ed8;
                     }
 
                     .sidebar-subitem.active {
-                        background: rgba(139, 92, 246, 0.25);
-                        color: white;
+                        background: #e8f1ff;
+                        color: #1d4ed8;
+                        border: 1px solid #bfdbfe;
                         font-weight: 500;
                     }
 

@@ -53,6 +53,30 @@ function Profile() {
         });
     };
 
+    const askPasswordStep = async ({ title, text = '', placeholder = '', confirmText = 'ถัดไป' }) => {
+        return Swal.fire({
+            title,
+            text,
+            input: 'password',
+            inputPlaceholder: placeholder,
+            inputAttributes: { autocapitalize: 'off', autocorrect: 'off' },
+            showCancelButton: true,
+            confirmButtonText: confirmText,
+            cancelButtonText: t('cancel'),
+            reverseButtons: true,
+            buttonsStyling: false,
+            customClass: {
+                popup: 'profile-password-popup',
+                title: 'profile-password-title',
+                htmlContainer: 'profile-password-text',
+                input: 'profile-password-input',
+                actions: 'profile-password-actions',
+                confirmButton: 'profile-password-confirm',
+                cancelButton: 'profile-password-cancel',
+            },
+        });
+    };
+
     // --- Helper: Calculate Age ---
     const calculateAge = (dob) => {
         if (!dob) return '';
@@ -204,40 +228,25 @@ function Profile() {
             return;
         }
 
-        const currentPasswordRes = await Swal.fire({
+        const currentPasswordRes = await askPasswordStep({
             title: 'กรอกรหัสผ่านปัจจุบัน',
-            input: 'password',
-            inputPlaceholder: 'Current password',
-            inputAttributes: { autocapitalize: 'off', autocorrect: 'off' },
-            showCancelButton: true,
-            confirmButtonText: 'ถัดไป',
-            cancelButtonText: t('cancel'),
-            reverseButtons: true,
+            placeholder: 'Current password',
+            confirmText: 'ถัดไป',
         });
         if (!currentPasswordRes.isConfirmed) return;
 
-        const newPasswordRes = await Swal.fire({
+        const newPasswordRes = await askPasswordStep({
             title: 'กรอกรหัสผ่านใหม่',
             text: 'อย่างน้อย 8 ตัวอักษร',
-            input: 'password',
-            inputPlaceholder: 'New password',
-            inputAttributes: { autocapitalize: 'off', autocorrect: 'off' },
-            showCancelButton: true,
-            confirmButtonText: 'ถัดไป',
-            cancelButtonText: t('cancel'),
-            reverseButtons: true,
+            placeholder: 'New password',
+            confirmText: 'ถัดไป',
         });
         if (!newPasswordRes.isConfirmed) return;
 
-        const confirmPasswordRes = await Swal.fire({
+        const confirmPasswordRes = await askPasswordStep({
             title: 'ยืนยันรหัสผ่านใหม่',
-            input: 'password',
-            inputPlaceholder: 'Confirm new password',
-            inputAttributes: { autocapitalize: 'off', autocorrect: 'off' },
-            showCancelButton: true,
-            confirmButtonText: 'ยืนยัน',
-            cancelButtonText: t('cancel'),
-            reverseButtons: true,
+            placeholder: 'Confirm new password',
+            confirmText: 'ยืนยัน',
         });
         if (!confirmPasswordRes.isConfirmed) return;
 
@@ -265,8 +274,18 @@ function Profile() {
 
     const formatDate = (dateString) => {
         if (!dateString) return '-';
-        const date = new Date(dateString);
-        return date.toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+        const normalized = /^\d{4}-\d{2}-\d{2}$/.test(String(dateString))
+            ? `${dateString}T00:00:00`
+            : dateString;
+        const date = new Date(normalized);
+        if (Number.isNaN(date.getTime())) return '-';
+
+        const thaiMonths = [
+            'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+            'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+        ];
+
+        return `${date.getDate()} ${thaiMonths[date.getMonth()]} ${date.getFullYear()}`;
     };
 
     const getMaskedIdCard = (idCard) => {

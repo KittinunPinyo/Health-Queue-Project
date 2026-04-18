@@ -7,7 +7,6 @@ function AppointmentDetailModal({ appointment, user, isOpen, onClose }) {
     const { t } = useLanguage();
     if (!isOpen || !appointment || !user) return null;
 
-    const profile = user.healthProfile || {};
     const a = appointment; 
 
     let statusHtml = '';
@@ -38,110 +37,9 @@ function AppointmentDetailModal({ appointment, user, isOpen, onClose }) {
                     <hr />
                     <h4>{t('appointmentInfo')}</h4>
                     <p><strong>{t('doctor')}:</strong> {a.selectedDoctor || a.doctor?.name || '-'}</p>
-                    <p><strong>{t('clinic')}:</strong> {a.clinic?.name}</p>
-                    <p><strong>{t('dateTime')}:</strong> {a.date} {t('time')} {a.time}</p>
-                    <p><strong>{t('packageService')}:</strong> {a.appointmentType || a.package || '-'}</p>
-                    
-                    {/* แสดงรอบนัดหมายทั้งหมด */}
-                    {a.appointments && a.appointments.length > 0 && (
-                        <div style={{
-                            marginTop: '1rem',
-                            padding: '1rem',
-                            backgroundColor: '#f0f9ff',
-                            borderRadius: '12px',
-                            border: '2px solid #3b82f6'
-                        }}>
-                            <div style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.5rem',
-                                fontSize: '0.95rem',
-                                color: '#1e40af',
-                                fontWeight: '700',
-                                marginBottom: '0.75rem',
-                                paddingBottom: '0.5rem',
-                                borderBottom: '1px solid #bfdbfe'
-                            }}>
-                                <span>📅</span>
-                                {t('selectedAppointmentRounds')}
-                            </div>
-                            {a.appointments.map((apt, index) => (
-                                apt.date && apt.time && (
-                                    <div key={index} style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '0.75rem',
-                                        padding: '0.75rem',
-                                        backgroundColor: index === 0 ? '#dbeafe' : '#eff6ff',
-                                        borderRadius: '8px',
-                                        marginBottom: index < a.appointments.length - 1 ? '0.5rem' : 0,
-                                        border: index === 0 ? '2px solid #3b82f6' : '1px solid #bfdbfe'
-                                    }}>
-                                        <span style={{
-                                            backgroundColor: index === 0 ? '#1e40af' : index === 1 ? '#3b82f6' : '#60a5fa',
-                                            color: 'white',
-                                            padding: '0.3rem 0.6rem',
-                                            borderRadius: '6px',
-                                            fontSize: '0.75rem',
-                                            fontWeight: '700',
-                                            minWidth: '55px',
-                                            textAlign: 'center'
-                                        }}>
-                                            {t('round')} {index + 1}{index === 0 ? ' ★' : ''}
-                                        </span>
-                                        <div style={{flex: 1}}>
-                                            <div style={{fontSize: '0.9rem', color: '#1e293b', fontWeight: '600'}}>
-                                                {apt.date}
-                                            </div>
-                                            <div style={{fontSize: '0.8rem', color: '#3b82f6', fontWeight: '500'}}>
-                                                ⏰ {t('atTime')} {apt.time}
-                                            </div>
-                                        </div>
-                                        {index === 0 && (
-                                            <span style={{
-                                                backgroundColor: '#fef3c7',
-                                                color: '#d97706',
-                                                padding: '0.2rem 0.4rem',
-                                                borderRadius: '4px',
-                                                fontSize: '0.65rem',
-                                                fontWeight: '600'
-                                            }}>
-                                                {t('primary')}
-                                            </span>
-                                        )}
-                                    </div>
-                                )
-                            ))}
-                        </div>
-                    )}
-                    
-                    {a.symptoms && (
-                        <div className="symptom-box" style={{ marginTop: '1rem' }}>
-                            <strong>{t('initialSymptoms')}:</strong>
-                            <p>{a.symptoms}</p>
-                        </div>
-                    )}
-                    
-                    {a.status === 'rejected' && (
-                        <div className="rejection-reason" style={{ marginTop: '1rem' }}>
-                            <strong>{t('adminReason')}:</strong>
-                            <p>{a.rejectionReason}</p>
-                        </div>
-                    )}
-
-                    {a.status === 'confirmed' && (
-                        <div className="patient-health-info" style={{ marginTop: '1rem', backgroundColor: '#f6ffed', borderColor: '#b7eb8f' }}>
-                            <strong style={{ color: '#389e0d' }}>{t('advice')}:</strong>
-                            <p>{t('arriveEarly')}</p>
-                        </div>
-                    )}
-                    
-                    <hr />
-                    <h4>{t('yourHealthInfo')}</h4>
-                    <p><strong>{t('ageGender')}:</strong> {profile.age || 'N/A'} {t('years')} / {profile.gender || 'N/A'}</p>
-                    <p><strong>{t('heightWeight')}:</strong> {profile.height || 'N/A'} {t('cm')} / {profile.weight || 'N/A'} {t('kg')}</p>
-                    <p><strong>{t('chronicDiseases')}:</strong> {profile.conditions || t('none')}</p>
-                    <p><strong>{t('drugAllergies')}:</strong> {profile.allergies || t('none')}</p>
+                    <p><strong>{t('clinic')}:</strong> {a.clinic?.name || '-'}</p>
+                    <p><strong>{t('dateTime')}:</strong> {a.date || '-'} {t('time')} {a.time || '-'}</p>
+                    <p><strong>{t('adminReason')}:</strong> {a.rejectionReason || '-'}</p>
                 </div>
             </div>
         </div>

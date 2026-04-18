@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 
 function updateNotificationBadgeOnLoad() {
@@ -77,6 +76,17 @@ function Notifications() {
             .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
     }, [notifications, currentUser]);
 
+    const summary = useMemo(() => {
+        return myNotifications.reduce((acc, item) => {
+            const type = item?.type || 'default';
+            if (type === 'confirmed') acc.confirmed += 1;
+            else if (type === 'rejected') acc.rejected += 1;
+            else if (type === 'system') acc.system += 1;
+            else acc.other += 1;
+            return acc;
+        }, { confirmed: 0, rejected: 0, system: 0, other: 0 });
+    }, [myNotifications]);
+
     const formatDate = (isoString) => {
         const d = new Date(isoString);
         const locale = language === 'th' ? 'th-TH' : 'en-US';
@@ -92,25 +102,25 @@ function Notifications() {
 
         return (
             <div key={n.id} style={{
-                display: 'flex', gap: '16px', alignItems: 'flex-start',
+                display: 'flex', gap: '14px', alignItems: 'flex-start',
                 background: cfg.lightBg,
                 border: `1px solid ${cfg.border}`,
-                borderRadius: '18px',
-                padding: '20px 22px',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.8)',
+                borderRadius: '16px',
+                padding: '16px 18px',
+                boxShadow: '0 6px 18px rgba(15,23,42,0.06), inset 0 1px 0 rgba(255,255,255,0.8)',
                 backdropFilter: 'blur(8px)',
                 transition: 'transform 0.18s, box-shadow 0.18s',
                 cursor: 'default',
             }}
-                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 28px rgba(0,0,0,0.10), inset 0 1px 0 rgba(255,255,255,0.8)'; }}
-                onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.8)'; }}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 10px 24px rgba(15,23,42,0.10), inset 0 1px 0 rgba(255,255,255,0.8)'; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 6px 18px rgba(15,23,42,0.06), inset 0 1px 0 rgba(255,255,255,0.8)'; }}
             >
                 {/* Icon circle */}
                 <div style={{
-                    flexShrink: 0, width: '48px', height: '48px', borderRadius: '14px',
+                    flexShrink: 0, width: '42px', height: '42px', borderRadius: '12px',
                     background: cfg.iconBg,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '22px',
+                    fontSize: '20px',
                     boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
                 }}>
                     {cfg.icon}
@@ -123,19 +133,19 @@ function Notifications() {
                         <span style={{
                             display: 'inline-flex', alignItems: 'center', gap: '5px',
                             background: cfg.tag.bg, color: cfg.tag.color,
-                            fontSize: '11px', fontWeight: '700', letterSpacing: '0.05em',
+                            fontSize: '10px', fontWeight: '700', letterSpacing: '0.04em',
                             padding: '3px 10px', borderRadius: '999px',
                         }}>
                             {cfg.tag.label}
                         </span>
-                        <span style={{ fontSize: '12px', color: '#94a3b8', whiteSpace: 'nowrap' }}>
+                        <span style={{ fontSize: '11px', color: '#94a3b8', whiteSpace: 'nowrap' }}>
                             🕐 {timeStr} · {dateStr}
                         </span>
                     </div>
 
                     {/* Message */}
                     <p style={{
-                        margin: 0, fontSize: '14px', lineHeight: '1.65',
+                        margin: 0, fontSize: '15px', lineHeight: '1.55',
                         color: '#1e293b', fontFamily: "'Sarabun','Prompt',sans-serif",
                     }}>
                         {n.type === 'system'
@@ -148,7 +158,7 @@ function Notifications() {
                 {/* Accent bar on right edge */}
                 <div style={{
                     flexShrink: 0, width: '4px', borderRadius: '99px',
-                    background: cfg.gradient, alignSelf: 'stretch', minHeight: '40px',
+                    background: cfg.gradient, alignSelf: 'stretch', minHeight: '36px',
                 }} />
             </div>
         );
@@ -160,7 +170,7 @@ function Notifications() {
             {/* ── Hero Header ───────────────────────────────────────────── */}
             <div style={{
                 background: 'linear-gradient(135deg,#1e40af 0%,#2563eb 60%,#4f46e5 100%)',
-                padding: '120px 24px 72px',
+                padding: '88px 18px 64px',
                 position: 'relative', overflow: 'hidden',
             }}>
                 {/* decorative blobs */}
@@ -182,17 +192,31 @@ function Notifications() {
                     <p style={{ margin:0, color:'rgba(191,219,254,0.9)', fontSize:'15px' }}>
                         {myNotifications.length > 0 ? `${myNotifications.length} รายการ` : 'ไม่มีการแจ้งเตือนขณะนี้'}
                     </p>
+
+                    {myNotifications.length > 0 && (
+                        <div style={{
+                            marginTop: '16px',
+                            display: 'flex',
+                            justifyContent: 'center',
+                            gap: '8px',
+                            flexWrap: 'wrap',
+                        }}>
+                            <span style={{ background: 'rgba(34,197,94,0.22)', color: 'white', fontSize: '12px', fontWeight: 700, padding: '4px 10px', borderRadius: '999px', border: '1px solid rgba(255,255,255,0.25)' }}>ยืนยัน {summary.confirmed}</span>
+                            <span style={{ background: 'rgba(239,68,68,0.22)', color: 'white', fontSize: '12px', fontWeight: 700, padding: '4px 10px', borderRadius: '999px', border: '1px solid rgba(255,255,255,0.25)' }}>ปฏิเสธ {summary.rejected}</span>
+                            <span style={{ background: 'rgba(59,130,246,0.22)', color: 'white', fontSize: '12px', fontWeight: 700, padding: '4px 10px', borderRadius: '999px', border: '1px solid rgba(255,255,255,0.25)' }}>ข่าวสาร {summary.system}</span>
+                        </div>
+                    )}
                 </div>
             </div>
 
             {/* ── Card List ─────────────────────────────────────────────── */}
-            <main style={{ maxWidth: '700px', margin: '-40px auto 60px', padding: '0 20px', position: 'relative', zIndex: 1 }}>
+            <main style={{ maxWidth: '920px', margin: '-36px auto 54px', padding: '0 16px', position: 'relative', zIndex: 1 }}>
 
                 {myNotifications.length === 0 ? (
                     /* Empty State */
                     <div style={{
                         background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(16px)',
-                        borderRadius: '24px', border: '1px solid rgba(147,197,253,0.3)',
+                        borderRadius: '20px', border: '1px solid rgba(147,197,253,0.3)',
                         boxShadow: '0 8px 32px rgba(30,64,175,0.10)',
                         padding: '64px 32px', textAlign: 'center',
                     }}>
@@ -203,30 +227,30 @@ function Notifications() {
                 ) : (
                     <div style={{
                         background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(16px)',
-                        borderRadius: '24px', border: '1px solid rgba(147,197,253,0.3)',
+                        borderRadius: '20px', border: '1px solid rgba(147,197,253,0.3)',
                         boxShadow: '0 8px 32px rgba(30,64,175,0.10)',
                         overflow: 'hidden',
                     }}>
                         {/* list header */}
                         <div style={{
-                            padding: '20px 24px 16px',
+                            padding: '16px 18px 14px',
                             borderBottom: '1px solid rgba(226,232,240,0.8)',
                             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                         }}>
-                            <span style={{ fontWeight: '700', color: '#0f172a', fontSize: '16px' }}>
+                            <span style={{ fontWeight: '700', color: '#0f172a', fontSize: '15px' }}>
                                 {t('notificationList') || 'รายการแจ้งเตือน'}
                             </span>
                             <span style={{
                                 background: 'linear-gradient(135deg,#2563eb,#4f46e5)',
-                                color: 'white', fontSize: '12px', fontWeight: '700',
-                                padding: '3px 12px', borderRadius: '999px',
+                                color: 'white', fontSize: '11px', fontWeight: '700',
+                                padding: '3px 10px', borderRadius: '999px',
                             }}>
                                 {myNotifications.length} รายการ
                             </span>
                         </div>
 
                         {/* cards */}
-                        <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                             {myNotifications.map(renderCard)}
                         </div>
                     </div>

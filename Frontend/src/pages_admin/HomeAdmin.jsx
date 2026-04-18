@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import emailjs from '@emailjs/browser';
+import axios from 'axios';
 // (CSS ถูก import ใน main.jsx แล้ว)
 
 // (Config EmailJS)
@@ -110,6 +111,43 @@ function HomeAdmin() {
         saveRequestsData(updatedRequests);
     };
 
+    const createAppointmentInApi = async (request) => {
+        const response = await axios.post('/api/appointments', {
+            ...request,
+            status: request?.status || 'new',
+        });
+        return response?.data?.appointment || null;
+    };
+
+    const syncRequestStatusToApi = async (request, payload) => {
+        const localId = request?.id;
+        if (!localId) return null;
+
+        try {
+            const response = await axios.patch(`/api/appointments/${encodeURIComponent(localId)}/status`, payload);
+            return response?.data?.appointment || null;
+        } catch (error) {
+            if (error?.response?.status === 404) {
+                try {
+                    const created = await createAppointmentInApi(request);
+                    if (!created?.id) return null;
+
+                    const retry = await axios.patch(
+                        `/api/appointments/${encodeURIComponent(created.id)}/status`,
+                        payload
+                    );
+                    return retry?.data?.appointment || created;
+                } catch (retryError) {
+                    console.error('Sync status to API failed after create fallback:', retryError);
+                    return null;
+                }
+            }
+
+            console.error('Sync status to API failed:', error);
+            return null;
+        }
+    };
+
     // --- Handlers (Send Email / Confirm / Reject) ---
 
     const handleSendToDoctor = async (id) => {
@@ -164,8 +202,19 @@ function HomeAdmin() {
             const message = `นัดหมายของคุณกับ ${doctorName} ได้รับการ "ยืนยัน" แล้ว วันที่ ${appointmentDate} เวลา ${appointmentTime} (ดูรายละเอียดในอีเมล)`;
             createNotification(request.patient.id, 'confirmed', message);
             
-            // อัพเดท request ด้วยรอบที่เลือก
-            updateRequestStatusWithRound(id, 'confirmed', appointmentDate, appointmentTime, selectedRoundIndex);
+            // อัพเดท request ด้วยรอบที่เลือก (sync ไป API ก่อน)
+            const syncedAppointment = await syncRequestStatusToApi(request, {
+                status: 'confirmed',
+                date: appointmentDate,
+                time: appointmentTime,
+                confirmedRound: selectedRoundIndex + 1,
+            });
+
+            updateRequestStatusWithRound(id, 'confirmed', appointmentDate, appointmentTime, selectedRoundIndex, syncedAppointment);
+
+            if (!syncedAppointment) {
+                alert('ยืนยันแล้วในหน้าจอ แต่บันทึกสถานะบนเซิร์ฟเวอร์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
+            }
             
             alert(`ยืนยันนัดหมายและส่งเมลให้คุณ ${request.patient.name} เรียบร้อยแล้ว\nรอบที่เลือก: ${appointmentDate} เวลา ${appointmentTime}`);
 
@@ -178,15 +227,16 @@ function HomeAdmin() {
     };
     
     // อัพเดท status พร้อมรอบที่เลือก
-    const updateRequestStatusWithRound = (id, newStatus, confirmedDate, confirmedTime, selectedRoundIndex) => {
+    const updateRequestStatusWithRound = (id, newStatus, confirmedDate, confirmedTime, selectedRoundIndex, syncedAppointment = null) => {
         const updated = requests.map(r => {
             if (r.id === id) {
                 return { 
                     ...r, 
+                    id: syncedAppointment?.id || r.id,
                     status: newStatus,
                     date: confirmedDate,
                     time: confirmedTime,
-                    confirmedRound: selectedRoundIndex + 1  // บันทึกว่าเลือกรอบไหน (1-indexed)
+                    confirmedRound: syncedAppointment?.confirmedRound || (selectedRoundIndex + 1)  // บันทึกว่าเลือกรอบไหน (1-indexed)
                 };
             }
             return r;
@@ -194,7 +244,7 @@ function HomeAdmin() {
         saveRequestsData(updated);
     };
 
-    const handleRejectSpam = (id) => {
+    const handleRejectSpam = async (id) => {
         if (!window.confirm('คุณต้องการปฏิเสธคำขอนี้ ใช่หรือไม่?')) return;
 
         const req = requests.find(r => r.id === id);
@@ -203,19 +253,29 @@ function HomeAdmin() {
         // Use admin-provided rejection message if available
         const reason = (rejectionMessages[id] || 'คำขอของคุณถูกปฏิเสธโดยผู้ดูแลระบบ').trim();
 
+        const syncedAppointment = await syncRequestStatusToApi(req, {
+            status: 'rejected',
+            rejectionReason: reason,
+        });
+
         // Update request status to 'rejected' and keep record
         const updatedRequests = requests.map(r => {
             if (r.id === id) {
                 return { 
                     ...r, 
+                    id: syncedAppointment?.id || r.id,
                     status: 'rejected',
                     rejectedAt: new Date().toISOString(),
-                    rejectionReason: reason
+                    rejectionReason: syncedAppointment?.rejectionReason || reason
                 };
             }
             return r;
         });
         saveRequestsData(updatedRequests);
+
+        if (!syncedAppointment) {
+            alert('ปฏิเสธแล้วในหน้าจอ แต่บันทึกสถานะบนเซิร์ฟเวอร์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
+        }
 
         // Notify the patient via app notifications
         const patientId = req.patient?.id || req.patientId || null;

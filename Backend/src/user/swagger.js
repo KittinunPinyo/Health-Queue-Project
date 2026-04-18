@@ -18,6 +18,7 @@ export const openApiDocument = {
     { name: 'Hospitals', description: 'API สำหรับจัดการโรงพยาบาลและคลินิก' },
     { name: 'Doctors', description: 'API สำหรับจัดการข้อมูลแพทย์' },
     { name: 'Appointments', description: 'API สำหรับจัดการการนัดหมาย' },
+    { name: 'Chat', description: 'API สำหรับระบบห้องแชทและข้อความ' },
   ],
   components: {
     securitySchemes: {
@@ -232,6 +233,8 @@ export const openApiDocument = {
           gender: { type: 'string', example: 'ชาย' },
           birthDate: { type: 'string', format: 'date', nullable: true },
           nationality: { type: 'string', example: 'ไทย' },
+          confirmedRound: { type: 'integer', nullable: true, example: 1 },
+          rejectionReason: { type: 'string', example: 'ข้อมูลไม่ครบถ้วน' },
           createdAt: { type: 'string', format: 'date-time' },
           updatedAt: { type: 'string', format: 'date-time' },
         },
@@ -278,6 +281,67 @@ export const openApiDocument = {
           gender: { type: 'string', example: 'ชาย' },
           birthDate: { type: 'string', format: 'date', nullable: true },
           nationality: { type: 'string', example: 'ไทย' },
+        },
+      },
+      AppointmentStatusUpdateRequest: {
+        type: 'object',
+        required: ['status'],
+        properties: {
+          status: {
+            type: 'string',
+            enum: ['new', 'pending', 'confirmed', 'rejected', 'cancelled'],
+            example: 'confirmed',
+          },
+          date: { type: 'string', format: 'date', nullable: true, example: '2026-03-30' },
+          time: { type: 'string', nullable: true, example: '09:30' },
+          confirmedRound: { type: 'integer', nullable: true, example: 1 },
+          rejectionReason: { type: 'string', nullable: true, example: 'ข้อมูลไม่ครบถ้วน' },
+        },
+      },
+      ChatRoom: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', example: '1' },
+          patientId: { type: 'integer', example: 1 },
+          adminId: { type: 'integer', nullable: true, example: 2 },
+          patientName: { type: 'string', example: 'สมชาย ไม่ใช่สมหญิง' },
+          lastMessage: { type: 'string', example: 'สวัสดีค่ะ ขอเลื่อนนัดได้ไหมคะ' },
+          lastMessageAt: { type: 'string', format: 'date-time' },
+          unreadCount: { type: 'integer', example: 3 },
+          createdAt: { type: 'string', format: 'date-time' },
+          updatedAt: { type: 'string', format: 'date-time' },
+        },
+      },
+      ChatMessage: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', example: '10' },
+          roomId: { type: 'string', example: '1' },
+          senderId: { type: 'integer', nullable: true, example: 1 },
+          senderRole: { type: 'string', enum: ['patient', 'admin'], example: 'patient' },
+          text: { type: 'string', example: 'ขอเลื่อนเวลาเป็นบ่ายสองได้ไหมคะ' },
+          isRead: { type: 'boolean', example: false },
+          readAt: { type: 'string', format: 'date-time', nullable: true },
+          createdAt: { type: 'string', format: 'date-time' },
+        },
+      },
+      ChatMessageCreateRequest: {
+        type: 'object',
+        required: ['senderRole', 'text'],
+        properties: {
+          roomId: { type: 'string', nullable: true, example: '1' },
+          patientId: { type: 'integer', nullable: true, example: 1 },
+          adminId: { type: 'integer', nullable: true, example: 2 },
+          senderId: { type: 'integer', nullable: true, example: 1 },
+          senderRole: { type: 'string', enum: ['patient', 'admin'], example: 'patient' },
+          text: { type: 'string', example: 'สวัสดีค่ะ ขอเลื่อนนัดได้ไหมคะ' },
+        },
+      },
+      ChatReadRequest: {
+        type: 'object',
+        required: ['readerRole'],
+        properties: {
+          readerRole: { type: 'string', enum: ['patient', 'admin'], example: 'admin' },
         },
       },
     },
@@ -435,6 +499,42 @@ export const openApiDocument = {
       },
     },
     '/api/user/profile': {
+      get: {
+        tags: ['Auth'],
+        summary: 'ดูข้อมูลโปรไฟล์ของผู้ใช้ที่ล็อกอินผ่าน /api/user/profile',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'ข้อมูลโปรไฟล์ผู้ใช้',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    user: { $ref: '#/components/schemas/UserProfile' },
+                  },
+                },
+              },
+            },
+          },
+          401: {
+            description: 'ไม่มีโทเค็นยืนยันตัวตน',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+              },
+            },
+          },
+          404: {
+            description: 'ไม่พบผู้ใช้',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+              },
+            },
+          },
+        },
+      },
       put: {
         tags: ['Auth'],
         summary: 'แก้ไขข้อมูลโปรไฟล์ของผู้ใช้ที่ล็อกอิน',
@@ -622,6 +722,66 @@ export const openApiDocument = {
         },
       },
     },
+    '/api/user/search-by-condition': {
+      get: {
+        tags: ['Users'],
+        summary: 'ค้นหารายชื่อคนไข้ด้วยโรคประจำตัว (สำหรับผู้ดูแลระบบ)',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'condition',
+            in: 'query',
+            required: true,
+            schema: { type: 'string' },
+            description: 'คำค้นหาโรคประจำตัว เช่น เบาหวาน',
+          },
+        ],
+        responses: {
+          200: {
+            description: 'ผลลัพธ์การค้นหา',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    users: {
+                      type: 'array',
+                      items: { $ref: '#/components/schemas/UserProfile' },
+                    },
+                    total: { type: 'integer', example: 2 },
+                    condition: { type: 'string', example: 'เบาหวาน' },
+                  },
+                },
+              },
+            },
+          },
+          400: {
+            description: 'ไม่ได้ส่ง condition query',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+              },
+            },
+          },
+          401: {
+            description: 'ไม่มีโทเค็นยืนยันตัวตน',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+              },
+            },
+          },
+          403: {
+            description: 'ต้องเป็นผู้ดูแลระบบเท่านั้น',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+              },
+            },
+          },
+        },
+      },
+    },
     '/api/user/{id}': {
       get: {
         tags: ['Users'],
@@ -665,8 +825,57 @@ export const openApiDocument = {
               },
             },
           },
+          400: {
+            description: 'รูปแบบ user id ไม่ถูกต้อง',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+              },
+            },
+          },
           404: {
             description: 'ไม่พบผู้ใช้',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/user/{id}/favorites': {
+      get: {
+        tags: ['Users'],
+        summary: 'ดึงรายการโรงพยาบาลโปรดของผู้ใช้',
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'integer' },
+          },
+        ],
+        responses: {
+          200: {
+            description: 'รายการโปรดของผู้ใช้',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    favorites: {
+                      type: 'array',
+                      items: { $ref: '#/components/schemas/Hospital' },
+                    },
+                    count: { type: 'integer', example: 3 },
+                  },
+                },
+              },
+            },
+          },
+          500: {
+            description: 'ไม่สามารถดึงรายการโปรดได้',
             content: {
               'application/json': {
                 schema: { $ref: '#/components/schemas/ErrorResponse' },
@@ -1219,6 +1428,255 @@ export const openApiDocument = {
           },
           400: {
             description: 'ข้อมูลจำเป็นบางอย่างหายไป',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/appointments/{id}/status': {
+      patch: {
+        tags: ['Appointments'],
+        summary: 'อัปเดตสถานะนัดหมาย',
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string' },
+            description: 'รหัสนัดหมาย (source_request_id หรือ id ในฐานข้อมูล)',
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/AppointmentStatusUpdateRequest' },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'อัปเดตสถานะสำเร็จ',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    message: { type: 'string', example: 'อัปเดตสถานะนัดหมายสำเร็จ' },
+                    appointment: { $ref: '#/components/schemas/Appointment' },
+                  },
+                },
+              },
+            },
+          },
+          400: {
+            description: 'สถานะไม่ถูกต้อง',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+              },
+            },
+          },
+          404: {
+            description: 'ไม่พบนัดหมาย',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/chat/rooms': {
+      get: {
+        tags: ['Chat'],
+        summary: 'ดึงรายชื่อห้องแชท',
+        parameters: [
+          {
+            name: 'role',
+            in: 'query',
+            required: false,
+            schema: { type: 'string', enum: ['admin', 'patient'], default: 'admin' },
+            description: 'บทบาทของผู้เรียก API เพื่อคำนวณ unread count',
+          },
+          {
+            name: 'userId',
+            in: 'query',
+            required: false,
+            schema: { type: 'integer' },
+            description: 'บังคับส่งเมื่อ role=patient เพื่อกรองห้องของผู้ป่วยคนเดียว',
+          },
+        ],
+        responses: {
+          200: {
+            description: 'รายการห้องแชท',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'array',
+                  items: { $ref: '#/components/schemas/ChatRoom' },
+                },
+              },
+            },
+          },
+          400: {
+            description: 'พารามิเตอร์ไม่ถูกต้อง',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/chat/rooms/{roomId}/messages': {
+      get: {
+        tags: ['Chat'],
+        summary: 'ดึงข้อความของห้องแชท (แบ่งหน้า)',
+        parameters: [
+          {
+            name: 'roomId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string' },
+          },
+          {
+            name: 'page',
+            in: 'query',
+            required: false,
+            schema: { type: 'integer', default: 1, minimum: 1 },
+          },
+          {
+            name: 'pageSize',
+            in: 'query',
+            required: false,
+            schema: { type: 'integer', default: 30, minimum: 1, maximum: 100 },
+          },
+        ],
+        responses: {
+          200: {
+            description: 'ข้อมูลข้อความแบบแบ่งหน้า',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    roomId: { type: 'string', example: '1' },
+                    page: { type: 'integer', example: 1 },
+                    pageSize: { type: 'integer', example: 30 },
+                    total: { type: 'integer', example: 120 },
+                    totalPages: { type: 'integer', example: 4 },
+                    messages: {
+                      type: 'array',
+                      items: { $ref: '#/components/schemas/ChatMessage' },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          404: {
+            description: 'ไม่พบห้องแชท',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/chat/messages': {
+      post: {
+        tags: ['Chat'],
+        summary: 'ส่งข้อความใหม่',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/ChatMessageCreateRequest' },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: 'ส่งข้อความสำเร็จ',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    message: { type: 'string', example: 'Chat message sent' },
+                    roomId: { type: 'string', example: '1' },
+                    chatMessage: { $ref: '#/components/schemas/ChatMessage' },
+                  },
+                },
+              },
+            },
+          },
+          400: {
+            description: 'ข้อมูลไม่ครบหรือไม่ถูกต้อง',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/chat/rooms/{roomId}/read': {
+      patch: {
+        tags: ['Chat'],
+        summary: 'อัปเดตสถานะอ่านแล้วของข้อความในห้อง',
+        parameters: [
+          {
+            name: 'roomId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string' },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/ChatReadRequest' },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'อัปเดตสถานะอ่านแล้วสำเร็จ',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    message: { type: 'string', example: 'Read status updated' },
+                    roomId: { type: 'string', example: '1' },
+                    updatedCount: { type: 'integer', example: 5 },
+                  },
+                },
+              },
+            },
+          },
+          400: {
+            description: 'ข้อมูลไม่ถูกต้อง',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+              },
+            },
+          },
+          404: {
+            description: 'ไม่พบห้องแชท',
             content: {
               'application/json': {
                 schema: { $ref: '#/components/schemas/ErrorResponse' },

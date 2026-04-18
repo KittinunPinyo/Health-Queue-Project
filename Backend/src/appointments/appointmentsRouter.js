@@ -26,8 +26,39 @@ function normalizeTime(value) {
   return raw.slice(0, 5);
 }
 
+function normalizeObject(value) {
+  if (!value) return {};
+  if (typeof value === 'object' && !Array.isArray(value)) return value;
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function createRandomSixDigitCode() {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+async function generateUniqueAppointmentCode(dbGet) {
+  const maxAttempts = 30;
+
+  for (let i = 0; i < maxAttempts; i += 1) {
+    const code = createRandomSixDigitCode();
+    const existing = await dbGet('SELECT id FROM appointments WHERE source_request_id = ? LIMIT 1', [code]);
+    if (!existing) {
+      return code;
+    }
+  }
+
+  throw new Error('Unable to generate unique appointment code');
+}
+
 function mapAppointmentRow(row) {
   if (!row) return null;
+
+  const payload = normalizeObject(row.booking_payload);
 
   return {
     id: row.source_request_id || String(row.id),
@@ -57,12 +88,14 @@ function mapAppointmentRow(row) {
     gender: row.gender || '',
     birthDate: normalizeDate(row.birth_date),
     nationality: row.nationality || '',
+    confirmedRound: payload.confirmedRound ?? null,
+    rejectionReason: payload.rejectionReason || '',
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
 }
 
-export function createAppointmentsRouter({ dbAll, dbGet, dbInsert }) {
+export function createAppointmentsRouter({ dbAll, dbGet, dbRun, dbInsert }) {
   const router = Router();
 
   router.get('/', async (req, res) => {
@@ -151,6 +184,9 @@ export function createAppointmentsRouter({ dbAll, dbGet, dbInsert }) {
         nationality,
       };
 
+      const appointmentCode = await generateUniqueAppointmentCode(dbGet);
+      payload.id = appointmentCode;
+
       const insertResult = await dbInsert(
         `INSERT INTO appointments (
           source_request_id,
@@ -181,7 +217,7 @@ export function createAppointmentsRouter({ dbAll, dbGet, dbInsert }) {
           updated_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?, ?::jsonb, ?, ?, ?, ?, ?::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
         [
-          id || null,
+          appointmentCode,
           patientId,
           clinicId,
           clinicName,
@@ -213,6 +249,71 @@ export function createAppointmentsRouter({ dbAll, dbGet, dbInsert }) {
     } catch (error) {
       console.error('POST /api/appointments error:', error);
       return res.status(500).json({ error: 'Unable to create appointment' });
+    }
+  });
+
+  router.patch('/:id/status', async (req, res) => {
+    try {
+      const appointmentId = String(req.params.id || '').trim();
+      const {
+        status,
+        date,
+        time,
+        confirmedRound,
+        rejectionReason,
+      } = req.body || {};
+
+      const nextStatus = String(status || '').trim().toLowerCase();
+      const allowedStatuses = ['new', 'pending', 'confirmed', 'rejected', 'cancelled'];
+      if (!allowedStatuses.includes(nextStatus)) {
+        return res.status(400).json({ error: 'Invalid status value' });
+      }
+
+      const existing = await dbGet(
+        'SELECT * FROM appointments WHERE source_request_id = ? OR id::text = ? LIMIT 1',
+        [appointmentId, appointmentId]
+      );
+
+      if (!existing) {
+        return res.status(404).json({ error: 'Appointment not found' });
+      }
+
+      const updates = ['status = ?'];
+      const params = [nextStatus];
+
+      if (date !== undefined) {
+        updates.push('appointment_date = ?');
+        params.push(date ? normalizeDate(date) : null);
+      }
+
+      if (time !== undefined) {
+        updates.push('appointment_time = ?');
+        params.push(time ? normalizeTime(time) : null);
+      }
+
+      if (confirmedRound !== undefined || rejectionReason !== undefined) {
+        const payload = normalizeObject(existing.booking_payload);
+        if (confirmedRound !== undefined) {
+          payload.confirmedRound = confirmedRound;
+        }
+        if (rejectionReason !== undefined) {
+          payload.rejectionReason = rejectionReason;
+        }
+        updates.push('booking_payload = ?::jsonb');
+        params.push(JSON.stringify(payload));
+      }
+
+      params.push(existing.id);
+      await dbRun(
+        `UPDATE appointments SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+        params
+      );
+
+      const updated = await dbGet('SELECT * FROM appointments WHERE id = ?', [existing.id]);
+      return res.json({ message: 'Appointment status updated', appointment: mapAppointmentRow(updated) });
+    } catch (error) {
+      console.error('PATCH /api/appointments/:id/status error:', error);
+      return res.status(500).json({ error: 'Unable to update appointment status' });
     }
   });
 

@@ -6,6 +6,7 @@ import { openApiDocument } from './swagger.js';
 import { createHospitalsRouter } from '../hospitals/hospitalsRouter.js';
 import { createDoctorsRouter } from '../doctors/doctorsRouter.js';
 import { createAppointmentsRouter } from '../appointments/appointmentsRouter.js';
+import { createChatRouter } from '../chat/chatRouter.js';
 import pool, { dbGet, dbAll, dbRun, dbInsert } from './db.js';
 
 /**
@@ -111,6 +112,7 @@ async function initializeDatabase() {
     await dbRun(`ALTER TABLE appointments ADD COLUMN IF NOT EXISTS nationality TEXT`);
     await dbRun(`ALTER TABLE appointments ADD COLUMN IF NOT EXISTS booking_payload JSONB DEFAULT '{}'::jsonb`);
     await dbRun(`ALTER TABLE appointments ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`);
+    await dbRun(`CREATE UNIQUE INDEX IF NOT EXISTS appointments_source_request_id_unique_idx ON appointments (source_request_id) WHERE source_request_id IS NOT NULL`);
     console.log('Appointments table ready.');
 
     // Seed a default account on a fresh database so login works out-of-the-box.
@@ -175,6 +177,40 @@ async function initializeDatabase() {
       )
     `);
     console.log('Favorites table ready.');
+
+    // สร้างตารางห้องแชทสำหรับคนไข้และแอดมิน
+    await dbRun(`
+      CREATE TABLE IF NOT EXISTS chat_rooms (
+        id SERIAL PRIMARY KEY,
+        patient_id INTEGER NOT NULL,
+        admin_id INTEGER,
+        last_message_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (patient_id),
+        FOREIGN KEY (patient_id) REFERENCES users (id) ON DELETE CASCADE,
+        FOREIGN KEY (admin_id) REFERENCES users (id) ON DELETE SET NULL
+      )
+    `);
+
+    await dbRun(`
+      CREATE TABLE IF NOT EXISTS chat_messages (
+        id SERIAL PRIMARY KEY,
+        room_id INTEGER NOT NULL,
+        sender_id INTEGER,
+        sender_role TEXT NOT NULL,
+        message_text TEXT NOT NULL,
+        is_read BOOLEAN DEFAULT FALSE,
+        read_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (room_id) REFERENCES chat_rooms (id) ON DELETE CASCADE,
+        FOREIGN KEY (sender_id) REFERENCES users (id) ON DELETE SET NULL
+      )
+    `);
+
+    await dbRun(`CREATE INDEX IF NOT EXISTS chat_messages_room_created_idx ON chat_messages (room_id, created_at DESC)`);
+    await dbRun(`CREATE INDEX IF NOT EXISTS chat_messages_unread_idx ON chat_messages (room_id, is_read)`);
+    console.log('Chat tables ready.');
   } catch (err) {
     console.error('Database initialization error:', err);
     process.exit(1);
@@ -204,7 +240,9 @@ app.use('/api/hospitals', createHospitalsRouter({ dbGet, dbAll, dbRun, dbInsert 
 // รวมกลุ่ม API doctors ตามรูปตัวอย่าง
 app.use('/api/doctors', createDoctorsRouter({ dbGet, dbAll, dbRun, dbInsert }));
 // รวมกลุ่ม API appointments สำหรับการจองคิวและดึงรายการนัด
-app.use('/api/appointments', createAppointmentsRouter({ dbAll, dbGet, dbInsert }));
+app.use('/api/appointments', createAppointmentsRouter({ dbAll, dbGet, dbRun, dbInsert }));
+// รวมกลุ่ม API chat สำหรับห้องแชทและข้อความ
+app.use('/api/chat', createChatRouter({ dbAll, dbGet, dbRun, dbInsert }));
 /**
  * Routes
  */

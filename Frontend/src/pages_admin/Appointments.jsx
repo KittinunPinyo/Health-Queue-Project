@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useAuth } from '../contexts/AuthContext';
+import axios from 'axios';
 
 // --- Icons (SVG) ---
 const UsersIcon = () => (
@@ -25,7 +27,7 @@ const TrashIcon = () => (
 );
 
 // --- Component: Stat Card ---
-const StatCard = ({ title, value, icon: Icon, color1, color2 }) => {
+const StatCard = ({ title, value, icon: Icon, color1, color2, onClick, isActive }) => {
     return (
         <div style={{
             background: `linear-gradient(135deg, ${color1} 0%, ${color2} 100%)`,
@@ -36,9 +38,21 @@ const StatCard = ({ title, value, icon: Icon, color1, color2 }) => {
             flexDirection: 'column',
             justifyContent: 'space-between',
             height: '120px',
-            boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
+            boxShadow: isActive ? '0 0 0 4px rgba(59, 130, 246, 0.35), 0 10px 22px rgba(0,0,0,0.18)' : '0 4px 15px rgba(0,0,0,0.1)',
             position: 'relative',
-            overflow: 'hidden'
+            overflow: 'hidden',
+            cursor: 'pointer',
+            transform: isActive ? 'translateY(-2px)' : 'none',
+            transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+        }}
+        onClick={onClick}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onClick?.();
+            }
         }}>
             <div style={{ zIndex: 2 }}>
                 <h2 style={{ fontSize: '2.5rem', fontWeight: 'bold', margin: 0, lineHeight: 1 }}>{value}</h2>
@@ -76,7 +90,7 @@ const StatCard = ({ title, value, icon: Icon, color1, color2 }) => {
 };
 
 // --- Component: Modal แก้ไขคนไข้ ---
-function EditPatientModal({ user, requests, isOpen, onClose, onSave }) {
+function EditPatientModal({ user, isOpen, onClose, onSave }) {
     const [formData, setFormData] = useState({});
     const [healthData, setHealthData] = useState({});
 
@@ -91,14 +105,6 @@ function EditPatientModal({ user, requests, isOpen, onClose, onSave }) {
             setHealthData(user.healthProfile || {});
         }
     }, [user]);
-
-    // (กรองประวัติการนัดหมาย)
-    const patientHistory = useMemo(() => {
-        if (!user) return [];
-        return requests
-            .filter(r => r.patient?.id === user.id)
-            .sort((a, b) => b.id - a.id);
-    }, [user, requests]);
 
     if (!isOpen || !user) return null;
 
@@ -206,25 +212,155 @@ function EditPatientModal({ user, requests, isOpen, onClose, onSave }) {
     );
 }
 
+function AppointmentHistoryModal({ isOpen, onClose, user, loading, error, appointments }) {
+    if (!isOpen || !user) return null;
+
+    const modalOverlayStyle = {
+        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)', zIndex: 1000,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        backdropFilter: 'blur(3px)'
+    };
+    const modalContentStyle = {
+        background: 'white', padding: '25px', borderRadius: '16px',
+        width: '90%', maxWidth: '760px', maxHeight: '90vh', overflowY: 'auto',
+        boxShadow: '0 10px 25px rgba(0,0,0,0.2)'
+    };
+
+    return (
+        <div style={modalOverlayStyle} onClick={(e) => e.target === e.currentTarget && onClose()}>
+            <div style={modalContentStyle}>
+                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px'}}>
+                    <div>
+                        <h3 style={{margin: 0, fontSize: '1.25rem', color: '#1e293b'}}>ประวัติการนัดหมาย</h3>
+                        <p style={{margin: '4px 0 0 0', color: '#64748b'}}>คนไข้: {user.name || '-'}</p>
+                    </div>
+                    <button onClick={onClose} style={{background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#64748b'}}>&times;</button>
+                </div>
+
+                {loading ? (
+                    <div style={{padding: '24px', textAlign: 'center', color: '#64748b'}}>กำลังโหลดประวัติการนัดหมาย...</div>
+                ) : error ? (
+                    <div style={{padding: '12px 16px', borderRadius: '10px', background: '#fee2e2', color: '#991b1b'}}>{error}</div>
+                ) : appointments.length === 0 ? (
+                    <div style={{padding: '24px', textAlign: 'center', color: '#94a3b8'}}>ไม่พบประวัติการนัดหมาย</div>
+                ) : (
+                    <div style={{display: 'grid', gap: '10px'}}>
+                        {appointments.map((item) => (
+                            <div key={item.id} style={{border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px 14px'}}>
+                                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap'}}>
+                                    <div style={{fontWeight: '600', color: '#1e293b'}}>{item.clinic?.name || item.clinicName || 'ไม่ระบุคลินิก'}</div>
+                                    <div style={{fontSize: '0.85rem', color: '#64748b'}}>สถานะ: {item.status || '-'}</div>
+                                </div>
+                                <div style={{marginTop: '6px', color: '#334155', fontSize: '0.9rem'}}>
+                                    วันที่: {item.date || '-'} เวลา: {item.time || '-'}
+                                </div>
+                                <div style={{marginTop: '4px', color: '#64748b', fontSize: '0.85rem'}}>
+                                    แพทย์: {item.selectedDoctor || item.doctorName || 'ไม่ระบุ'}
+                                </div>
+                                {item.symptoms ? (
+                                    <div style={{marginTop: '4px', color: '#64748b', fontSize: '0.85rem'}}>อาการ: {item.symptoms}</div>
+                                ) : null}
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
 // --- Main Component: Appointments (Patient Management) ---
 function Appointments() { 
     const { t } = useLanguage();
+    const { fetchAdminUserList } = useAuth();
     // --- State ---
     const [users, setUsers] = useState([]);
-    const [requests, setRequests] = useState([]); 
     const [searchTerm, setSearchTerm] = useState('');
+    const [conditionFilter, setConditionFilter] = useState('');
+    const [cardFilter, setCardFilter] = useState('all');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [currentUser, setCurrentUser] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+    const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+    const [historyLoading, setHistoryLoading] = useState(false);
+    const [historyError, setHistoryError] = useState('');
+    const [historyUser, setHistoryUser] = useState(null);
+    const [historyAppointments, setHistoryAppointments] = useState([]);
 
-    // --- Data Loading ---
+    const normalizeUser = (rawUser) => ({
+        ...rawUser,
+        idCard: rawUser.id_card || rawUser.idCard || '',
+        healthProfile: {
+            age: rawUser.age || '',
+            gender: rawUser.gender || '',
+            height: rawUser.height || '',
+            weight: rawUser.weight || '',
+            conditions: rawUser.medical_conditions || '',
+            allergies: rawUser.allergies || '',
+        },
+    });
+
+    const loadPatientUsers = async (condition = '') => {
+        setLoading(true);
+        setError('');
+
+        try {
+            const conditionText = String(condition || '').trim();
+
+            if (conditionText) {
+                try {
+                    const response = await axios.get(`/api/user/search-by-condition?condition=${encodeURIComponent(conditionText)}`);
+                    const usersFromCondition = Array.isArray(response.data?.users) ? response.data.users : [];
+                    const patientUsers = usersFromCondition
+                        .filter((user) => String(user.role || '').toLowerCase() === 'patient')
+                        .map(normalizeUser);
+                    setUsers(patientUsers);
+                    return;
+                } catch (conditionApiError) {
+                    // Fallback: keep feature usable even if condition API fails.
+                    const response = await fetchAdminUserList();
+                    if (response.success) {
+                        const lowerCondition = conditionText.toLowerCase();
+                        const patientUsers = (response.users || [])
+                            .filter((user) => String(user.role || '').toLowerCase() === 'patient')
+                            .map(normalizeUser)
+                            .filter((user) => String(user.healthProfile?.conditions || '').toLowerCase().includes(lowerCondition));
+                        setUsers(patientUsers);
+                        setError('');
+                        return;
+                    }
+
+                    throw conditionApiError;
+                }
+            }
+
+            const response = await fetchAdminUserList();
+            if (response.success) {
+                const patientUsers = (response.users || [])
+                    .filter((user) => String(user.role || '').toLowerCase() === 'patient')
+                    .map(normalizeUser);
+                setUsers(patientUsers);
+            } else {
+                setUsers([]);
+                setError(response.error || 'ไม่สามารถโหลดข้อมูลคนไข้ได้ในขณะนี้');
+            }
+        } catch (err) {
+            setUsers([]);
+            setError(err.response?.data?.error || 'ไม่สามารถค้นหาคนไข้ด้วยโรคประจำตัวได้');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
-        const storedUsers = JSON.parse(sessionStorage.getItem('users') || localStorage.getItem('users') || '[]');
-        const storedRequests = JSON.parse(localStorage.getItem('requests')) || [];
-        sessionStorage.setItem('users', JSON.stringify(storedUsers));
-        localStorage.removeItem('users');
-        setUsers(storedUsers);
-        setRequests(storedRequests);
-    }, []); 
+        const timer = setTimeout(() => {
+            loadPatientUsers(conditionFilter);
+        }, 300);
+
+        return () => clearTimeout(timer);
+    }, [conditionFilter, fetchAdminUserList]);
 
     // --- Helper to update navbar badge ---
     useEffect(() => {
@@ -247,12 +383,23 @@ function Appointments() {
     // --- Filter Users ---
     const filteredUsers = useMemo(() => {
         const term = searchTerm.toLowerCase();
-        if (!term) return users;
-        return users.filter(user => 
-            user.name.toLowerCase().includes(term) ||
+        const usersByCard = users.filter((user) => {
+            const gender = String(user.healthProfile?.gender || '').trim();
+            const conditions = String(user.healthProfile?.conditions || '').trim();
+
+            if (cardFilter === 'male') return gender === 'ชาย';
+            if (cardFilter === 'female') return gender === 'หญิง';
+            if (cardFilter === 'risk') return Boolean(conditions) && conditions !== 'ไม่มี' && conditions !== '-';
+            return true;
+        });
+
+        if (!term) return usersByCard;
+        return usersByCard.filter(user => 
+            String(user.name || '').toLowerCase().includes(term) ||
+            String(user.email || '').toLowerCase().includes(term) ||
             (user.idCard && user.idCard.includes(term))
         );
-    }, [users, searchTerm]);
+    }, [users, searchTerm, cardFilter]);
 
     const handleOpenModal = (userId) => {
         const user = users.find(u => u.id === userId);
@@ -262,8 +409,27 @@ function Appointments() {
     const handleSaveUser = (userId, updatedData) => {
         const updatedUsers = users.map(u => u.id === userId ? { ...u, ...updatedData } : u);
         setUsers(updatedUsers);
-        sessionStorage.setItem('users', JSON.stringify(updatedUsers));
         // alert('แก้ไขข้อมูลคนไข้เรียบร้อยแล้ว');
+    };
+
+    const handleOpenHistory = async (user) => {
+        if (!user?.id) return;
+
+        setHistoryUser(user);
+        setHistoryAppointments([]);
+        setHistoryError('');
+        setIsHistoryModalOpen(true);
+        setHistoryLoading(true);
+
+        try {
+            const response = await axios.get(`/api/appointments?userId=${encodeURIComponent(user.id)}`);
+            const items = Array.isArray(response.data) ? response.data : [];
+            setHistoryAppointments(items);
+        } catch (err) {
+            setHistoryError(err.response?.data?.error || 'ไม่สามารถโหลดประวัติการนัดหมายได้');
+        } finally {
+            setHistoryLoading(false);
+        }
     };
 
     const handleDeletePatient = (userId) => {
@@ -271,7 +437,6 @@ function Appointments() {
         if (user && window.confirm(`คุณต้องการลบคนไข้ "${user.name}" ออกจากระบบใช่หรือไม่?`)) {
             const updatedUsers = users.filter(u => u.id !== userId);
             setUsers(updatedUsers);
-            sessionStorage.setItem('users', JSON.stringify(updatedUsers));
         }
     };
 
@@ -307,25 +472,52 @@ function Appointments() {
             marginBottom: '30px'
         },
         filters: {
+            background: 'white',
+            padding: '20px 24px',
+            borderRadius: '20px',
+            marginBottom: '24px',
+            boxShadow: '0 14px 38px rgba(15, 23, 42, 0.08)',
             display: 'flex',
-            gap: '15px',
-            marginBottom: '20px',
+            gap: '16px',
             flexWrap: 'wrap',
-            alignItems: 'center'
+            alignItems: 'center',
+            justifyContent: 'space-between'
         },
         searchBox: {
             flex: 1,
-            minWidth: '300px',
+            minWidth: '250px',
+            maxWidth: '500px',
             position: 'relative'
+        },
+        conditionBox: {
+            flex: 1,
+            minWidth: '260px',
+            position: 'relative'
+        },
+        filterSelect: {
+            padding: '10px 36px 10px 14px',
+            border: '1.5px solid #e5e7eb',
+            borderRadius: '8px',
+            fontSize: '14px',
+            outline: 'none',
+            minWidth: '170px',
+            cursor: 'pointer',
+            backgroundColor: '#f9fafb',
+            color: '#374151',
+            appearance: 'none',
+            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
+            backgroundRepeat: 'no-repeat',
+            backgroundPosition: 'right 10px center'
         },
         searchInput: {
             width: '100%',
-            padding: '12px 12px 12px 40px',
-            borderRadius: '10px',
-            border: '1px solid #e2e8f0',
-            fontSize: '0.95rem',
+            padding: '10px 14px 10px 40px',
+            borderRadius: '8px',
+            border: '1.5px solid #e5e7eb',
+            fontSize: '14px',
             outline: 'none',
-            transition: 'border-color 0.2s',
+            transition: 'all 0.2s',
+            backgroundColor: '#f9fafb',
             boxSizing: 'border-box'
         },
         tableContainer: {
@@ -396,16 +588,48 @@ function Appointments() {
 
             {/* Dashboard Stats */}
             <div style={styles.statsGrid}>
-                <StatCard title="คนไข้ทั้งหมด" value={stats.total} icon={UsersIcon} color1="#8b5cf6" color2="#7c3aed" />
-                <StatCard title="เพศชาย" value={stats.male} icon={MaleIcon} color1="#3b82f6" color2="#2563eb" />
-                <StatCard title="เพศหญิง" value={stats.female} icon={FemaleIcon} color1="#ec4899" color2="#db2777" />
-                <StatCard title="มีโรคประจำตัว" value={stats.risk} icon={ActivityIcon} color1="#f59e0b" color2="#d97706" />
+                <StatCard
+                    title="คนไข้ทั้งหมด"
+                    value={stats.total}
+                    icon={UsersIcon}
+                    color1="#8b5cf6"
+                    color2="#7c3aed"
+                    onClick={() => setCardFilter('all')}
+                    isActive={cardFilter === 'all'}
+                />
+                <StatCard
+                    title="เพศชาย"
+                    value={stats.male}
+                    icon={MaleIcon}
+                    color1="#3b82f6"
+                    color2="#2563eb"
+                    onClick={() => setCardFilter('male')}
+                    isActive={cardFilter === 'male'}
+                />
+                <StatCard
+                    title="เพศหญิง"
+                    value={stats.female}
+                    icon={FemaleIcon}
+                    color1="#ec4899"
+                    color2="#db2777"
+                    onClick={() => setCardFilter('female')}
+                    isActive={cardFilter === 'female'}
+                />
+                <StatCard
+                    title="มีโรคประจำตัว"
+                    value={stats.risk}
+                    icon={ActivityIcon}
+                    color1="#f59e0b"
+                    color2="#d97706"
+                    onClick={() => setCardFilter('risk')}
+                    isActive={cardFilter === 'risk'}
+                />
             </div>
 
             {/* Filters */}
             <div style={styles.filters}>
                 <div style={styles.searchBox}>
-                    <div style={{ position: 'absolute', top: '12px', left: '12px', color: '#94a3b8' }}>
+                    <div style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }}>
                         <SearchIcon />
                     </div>
                     <input 
@@ -416,7 +640,51 @@ function Appointments() {
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
                 </div>
+
+                <div style={styles.conditionBox}>
+                    <input 
+                        type="text"
+                        placeholder="กรองโรคประจำตัว เช่น เบาหวาน"
+                        style={{...styles.searchInput, padding: '10px 14px'}}
+                        value={conditionFilter}
+                        onChange={(e) => setConditionFilter(e.target.value)}
+                    />
+                </div>
+
+                {(searchTerm || conditionFilter || cardFilter !== 'all') && (
+                    <button
+                        onClick={() => {
+                            setSearchTerm('');
+                            setConditionFilter('');
+                            setCardFilter('all');
+                        }}
+                        style={{
+                            padding: '10px 16px',
+                            background: '#eef2ff',
+                            border: 'none',
+                            borderRadius: '12px',
+                            fontSize: '13px',
+                            cursor: 'pointer',
+                            color: '#4338ca',
+                            fontWeight: '600',
+                            transition: 'all 0.2s',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                        }}
+                        onMouseEnter={(e) => e.target.style.background = '#e0e7ff'}
+                        onMouseLeave={(e) => e.target.style.background = '#eef2ff'}
+                    >
+                        <span>✕</span> ล้าง
+                    </button>
+                )}
             </div>
+
+            {error && (
+                <div style={{ marginBottom: '16px', padding: '12px 16px', borderRadius: '10px', background: '#fee2e2', color: '#991b1b' }}>
+                    {error}
+                </div>
+            )}
 
             {/* User Table */}
             <div style={styles.tableContainer}>
@@ -430,17 +698,23 @@ function Appointments() {
                         </tr>
                     </thead>
                     <tbody>
-                        {filteredUsers.length > 0 ? (
+                        {loading ? (
+                            <tr>
+                                <td colSpan="4" style={{padding: '40px', textAlign: 'center', color: '#64748b'}}>
+                                    กำลังโหลดข้อมูลคนไข้...
+                                </td>
+                            </tr>
+                        ) : filteredUsers.length > 0 ? (
                             filteredUsers.map(user => {
                                 const profile = user.healthProfile || {};
                                 return (
                                     <tr key={user.id} style={{borderBottom: '1px solid #f1f5f9'}}>
                                         <td style={styles.td}>
                                             <div style={{display: 'flex', alignItems: 'center'}}>
-                                                <div style={styles.avatarCircle}>{user.name.charAt(0).toUpperCase()}</div>
+                                                <div style={styles.avatarCircle}>{String(user.name || '?').charAt(0).toUpperCase()}</div>
                                                 <div>
-                                                    <div style={{fontWeight: '600'}}>{user.name}</div>
-                                                    <div style={{fontSize: '0.8rem', color: '#94a3b8'}}>{user.id}</div>
+                                                    <div style={{fontWeight: '600'}}>{user.name || '-'}</div>
+                                                    <div style={{fontSize: '0.8rem', color: '#94a3b8'}}>{user.idCard || '-'}</div>
                                                 </div>
                                             </div>
                                         </td>
@@ -451,10 +725,18 @@ function Appointments() {
                                             <div style={{fontSize: '0.85rem'}}>
                                                 <span style={{background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', marginRight: '5px'}}>อายุ: {profile.age || '-'}</span>
                                                 <span style={{background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px'}}>เพศ: {profile.gender || '-'}</span>
-                                                <div style={{marginTop: '4px', color: '#64748b'}}>โรค: {profile.conditions || '-'}</div>
+                                                <div style={{marginTop: '4px', color: '#64748b'}}>
+                                                    โรคประจำตัว: {profile.conditions || '-'}
+                                                </div>
                                             </div>
                                         </td>
                                         <td style={{...styles.td, textAlign: 'right'}}>
+                                            <button 
+                                                onClick={() => handleOpenHistory(user)}
+                                                style={{...styles.actionBtn, background: '#eef2ff', color: '#4338ca'}}
+                                            >
+                                                ประวัติ
+                                            </button>
                                             <button 
                                                 onClick={() => handleOpenModal(user.id)}
                                                 style={{...styles.actionBtn, background: '#eff6ff', color: '#3b82f6'}}
@@ -488,10 +770,18 @@ function Appointments() {
             {/* Modal Component */}
             <EditPatientModal 
                 user={currentUser} 
-                requests={requests}
                 isOpen={isModalOpen} 
                 onClose={() => setIsModalOpen(false)} 
                 onSave={handleSaveUser} 
+            />
+
+            <AppointmentHistoryModal
+                isOpen={isHistoryModalOpen}
+                onClose={() => setIsHistoryModalOpen(false)}
+                user={historyUser}
+                loading={historyLoading}
+                error={historyError}
+                appointments={historyAppointments}
             />
         </div>
     );

@@ -10,11 +10,22 @@ const EMAILJS_CONFIG = {
     TEMPLATE_ID_AUTO_REPLY: "template_gqj3s6f"
 };
 
-const generateId = () => {
-    if (globalThis.crypto?.randomUUID) {
-        return globalThis.crypto.randomUUID();
+const generateLocalAppointmentCode = () => {
+    const requests = JSON.parse(localStorage.getItem('requests')) || [];
+    const existingIds = new Set(
+        requests
+            .map((item) => String(item?.id || '').replace(/\D/g, ''))
+            .filter((value) => value.length === 6)
+    );
+
+    for (let i = 0; i < 30; i += 1) {
+        const next = String(Math.floor(100000 + Math.random() * 900000));
+        if (!existingIds.has(next)) {
+            return next;
+        }
     }
-    return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+    return String(Date.now()).slice(-6);
 };
 
 const readStoredUser = () => {
@@ -25,6 +36,43 @@ const readStoredUser = () => {
     } catch {
         return null;
     }
+};
+
+const normalizeProfileUser = (rawUser) => {
+    if (!rawUser) return null;
+    return {
+        ...rawUser,
+        idCard: rawUser.id_card || rawUser.idCard || '',
+        healthProfile: {
+            dob: rawUser.date_of_birth || rawUser.dateOfBirth || '',
+            age: rawUser.age || '',
+            gender: rawUser.gender || '',
+            height: rawUser.height || '',
+            weight: rawUser.weight || '',
+            conditions: rawUser.medical_conditions || '',
+            allergies: rawUser.allergies || '',
+        },
+    };
+};
+
+const fetchProfileUser = async () => {
+    const token = sessionStorage.getItem('token');
+    const config = token ? { headers: { Authorization: `Bearer ${token}` } } : undefined;
+    const response = await axios.get('/api/auth/profile', config);
+    return normalizeProfileUser(response?.data?.user);
+};
+
+const normalizeDateInput = (value) => {
+    if (!value) return '';
+    const raw = String(value);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+    return raw.slice(0, 10);
+};
+
+const extractBirthYear = (dateValue) => {
+    const normalized = normalizeDateInput(dateValue);
+    if (!normalized) return '';
+    return normalized.slice(0, 4);
 };
 
 // Icon Components
@@ -136,6 +184,7 @@ function ClinicDetail() {
         firstName: '',
         lastName: '',
         birthDate: '',
+        birthYear: '',
         phone: '',
         nationality: '',
         idCard: '', 
@@ -146,21 +195,31 @@ function ClinicDetail() {
 
     useEffect(() => {
         const init = async () => {
-            const user = readStoredUser();
+            let user = null;
+            try {
+                user = await fetchProfileUser();
+            } catch {
+                user = readStoredUser();
+            }
+
             if (user) {
                 setCurrentUser(user);
                 const profile = user.healthProfile || {};
+                const [firstName = '', ...lastParts] = String(user.name || '').trim().split(' ');
+                const dobValue = normalizeDateInput(profile.dob || user.date_of_birth || user.dateOfBirth || '');
+                const genderValue = String(profile.gender || '').trim();
                 setStep3Data(prev => ({
                     ...prev,
-                    firstName: user.name?.split(' ')[0] || '',
-                    lastName: user.name?.split(' ').slice(1).join(' ') || '',
+                    firstName,
+                    lastName: lastParts.join(' '),
                     email: user.email || '',
                     phone: user.phone || '',
                     idCard: user.idCard || '',
-                    gender: profile.gender === 'ชาย' ? 'male' : profile.gender === 'หญิง' ? 'female' : '',
+                    gender: (genderValue === 'ชาย' || genderValue.toLowerCase() === 'male') ? 'male' : (genderValue === 'หญิง' || genderValue.toLowerCase() === 'female') ? 'female' : '',
                     nationality: 'thai',
                     relationship: 'self',
-                    birthDate: '',
+                    birthDate: dobValue,
+                    birthYear: extractBirthYear(dobValue),
                     name: user.name || ''
                 }));
             } else {
@@ -253,7 +312,7 @@ function ClinicDetail() {
     // ดึงรายชื่อโปรดของผู้ใช้
     useEffect(() => {
         if (currentUser?.id) {
-            axios.get(`/api/users/${currentUser.id}/favorites`)
+            axios.get(`/api/user/${currentUser.id}/favorites`)
                 .then(res => {
                     const favoriteIds = (res.data.favorites || []).map(h => h.id);
                     setFavorites(favoriteIds);
@@ -379,7 +438,7 @@ function ClinicDetail() {
         const validAppointments = step2Data.appointments.filter(apt => apt.date && apt.time);
 
         const newRequest = { 
-            id: generateId(), 
+            id: generateLocalAppointmentCode(), 
             status: "new",
             patient: { 
                 id: activeUser.id, 
@@ -1851,7 +1910,7 @@ function ClinicDetail() {
                             type="date"
                             style={inputStyle}
                             value={step3Data.birthDate || ''}
-                            onChange={(e) => setStep3Data(prev => ({ ...prev, birthDate: e.target.value }))}
+                            onChange={(e) => setStep3Data(prev => ({ ...prev, birthDate: e.target.value, birthYear: extractBirthYear(e.target.value) }))}
                         />
                     </div>
                 </div>
@@ -1933,17 +1992,42 @@ function ClinicDetail() {
             return `วันที่ ${day} ${month} ${year}`;
         };
 
+        const selectedRounds = (step2Data.appointments || []).filter((apt) => apt?.date && apt?.time);
+        const primaryRound = selectedRounds[0] || null;
+        const displayDoctor = step1Data.selectedDoctor
+            ? (typeof step1Data.selectedDoctor === 'string' ? step1Data.selectedDoctor : step1Data.selectedDoctor.name)
+            : '';
+
+        const infoTileStyle = {
+            backgroundColor: 'white',
+            border: '1px solid #d1fae5',
+            borderRadius: '14px',
+            padding: '0.9rem 1rem',
+            boxShadow: '0 4px 10px rgba(16, 185, 129, 0.06)',
+        };
+
         return (
-            <div style={{...styles.card, textAlign: 'center'}}>
+            <div
+                style={{
+                    ...styles.card,
+                    textAlign: 'left',
+                    padding: '2rem',
+                    borderRadius: '22px',
+                    background: 'linear-gradient(180deg, #ffffff 0%, #f8fffb 100%)',
+                    border: '1px solid #bbf7d0',
+                    boxShadow: '0 18px 40px rgba(16, 185, 129, 0.12)',
+                }}
+            >
                 <div style={{
                     width: '80px',
                     height: '80px',
-                    margin: '0 auto 1.5rem',
+                    margin: '0 auto 1.25rem',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    backgroundColor: '#d1fae5',
-                    borderRadius: '50%'
+                    background: 'radial-gradient(circle at 30% 30%, #a7f3d0 0%, #34d399 70%, #10b981 100%)',
+                    borderRadius: '50%',
+                    boxShadow: '0 10px 30px rgba(16, 185, 129, 0.35)'
                 }}>
                     <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M20 6L9 17l-5-5"/>
@@ -1951,42 +2035,52 @@ function ClinicDetail() {
                 </div>
                 
                 <h2 style={{
-                    fontSize: '1.5rem',
+                    textAlign: 'center',
+                    fontSize: '1.8rem',
                     color: '#10b981',
-                    marginBottom: '0.5rem',
-                    fontWeight: '600'
+                    marginBottom: '0.35rem',
+                    fontWeight: '700',
+                    letterSpacing: '-0.02em',
                 }}>
                     {t('confirmSuccess')}
                 </h2>
                 
                 <p style={{
+                    textAlign: 'center',
                     color: '#6b7280',
-                    fontSize: '0.9rem',
-                    marginBottom: '2rem',
+                    fontSize: '0.96rem',
+                    marginBottom: '1.5rem',
                     lineHeight: '1.6'
                 }}>
                     {t('confirmMessage')}
                 </p>
 
                 <div style={{
-                    backgroundColor: '#f0fdf4',
-                    border: '1px solid #bbf7d0',
-                    borderRadius: '12px',
-                    padding: '1.5rem',
+                    background: 'linear-gradient(180deg, #ecfdf5 0%, #f7fff9 100%)',
+                    border: '1px solid #86efac',
+                    borderRadius: '16px',
+                    padding: '1.4rem',
                     marginBottom: '2rem',
-                    textAlign: 'left'
+                    textAlign: 'left',
+                    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.8)'
                 }}>
                     <h3 style={{
-                        fontSize: '1rem',
+                        fontSize: '1.05rem',
                         color: '#166534',
                         marginBottom: '1rem',
-                        fontWeight: '600'
+                        fontWeight: '700'
                     }}>
                         {t('appointmentSummary')}
                     </h3>
-                    
-                    <div style={{display: 'flex', flexDirection: 'column', gap: '0.75rem'}}>
-                        <div style={{display: 'flex', alignItems: 'center', gap: '0.75rem'}}>
+
+                    <div
+                        style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
+                            gap: '0.75rem',
+                        }}
+                    >
+                        <div style={{ ...infoTileStyle, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2">
                                 <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
                                 <circle cx="12" cy="7" r="4"/>
@@ -1999,7 +2093,7 @@ function ClinicDetail() {
                             </div>
                         </div>
 
-                        <div style={{display: 'flex', alignItems: 'center', gap: '0.75rem'}}>
+                        <div style={{ ...infoTileStyle, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2">
                                 <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
                             </svg>
@@ -2011,7 +2105,7 @@ function ClinicDetail() {
                             </div>
                         </div>
 
-                        <div style={{display: 'flex', alignItems: 'center', gap: '0.75rem'}}>
+                        <div style={{ ...infoTileStyle, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2">
                                 <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
                                 <line x1="16" y1="2" x2="16" y2="6"/>
@@ -2021,89 +2115,12 @@ function ClinicDetail() {
                             <div style={{flex: 1}}>
                                 <div style={{fontSize: '0.75rem', color: '#6b7280'}}>{t('dateTime')}</div>
                                 <div style={{fontSize: '0.95rem', color: '#1f2937', fontWeight: '500'}}>
-                                    {formatDate(step2Data.appointments[0]?.date)} {t('time')} {step2Data.appointments[0]?.time}
+                                    {primaryRound ? `${formatDate(primaryRound.date)} ${t('time')} ${primaryRound.time}` : '-'}
                                 </div>
                             </div>
                         </div>
 
-                        {/* แสดงรอบนัดหมายทั้งหมด */}
-                        {step2Data.appointments && (
-                            <div style={{
-                                marginTop: '1rem',
-                                padding: '1.25rem',
-                                backgroundColor: 'white',
-                                borderRadius: '12px',
-                                border: '2px solid #10b981',
-                                boxShadow: '0 2px 8px rgba(16, 185, 129, 0.1)'
-                            }}>
-                                <div style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '0.5rem',
-                                    fontSize: '0.95rem',
-                                    color: '#166534',
-                                    fontWeight: '700',
-                                    marginBottom: '1rem',
-                                    paddingBottom: '0.75rem',
-                                    borderBottom: '1px solid #d1fae5'
-                                }}>
-                                    <span style={{fontSize: '1.25rem'}}>📅</span>
-                                    {t('selectedAppointmentRounds')}
-                                </div>
-                                <div style={{display: 'flex', flexDirection: 'column', gap: '0.75rem'}}>
-                                    {step2Data.appointments.map((apt, index) => (
-                                        apt.date && apt.time && (
-                                            <div key={index} style={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '1rem',
-                                                padding: '0.875rem 1rem',
-                                                backgroundColor: index === 0 ? '#ecfdf5' : '#f0fdf4',
-                                                borderRadius: '10px',
-                                                border: index === 0 ? '2px solid #10b981' : '1px solid #bbf7d0',
-                                                transition: 'all 0.2s'
-                                            }}>
-                                                <span style={{
-                                                    backgroundColor: index === 0 ? '#10b981' : index === 1 ? '#34d399' : '#6ee7b7',
-                                                    color: 'white',
-                                                    padding: '0.4rem 0.75rem',
-                                                    borderRadius: '6px',
-                                                    fontSize: '0.8rem',
-                                                    fontWeight: '700',
-                                                    minWidth: '60px',
-                                                    textAlign: 'center',
-                                                    boxShadow: '0 2px 4px rgba(16, 185, 129, 0.3)'
-                                                }}>
-                                                    {t('round')} {index + 1}{index === 0 ? ' ★' : ''}
-                                                </span>
-                                                <div style={{flex: 1}}>
-                                                    <div style={{fontSize: '0.95rem', color: '#1f2937', fontWeight: '600'}}>
-                                                        {formatDate(apt.date)}
-                                                    </div>
-                                                    <div style={{fontSize: '0.85rem', color: '#10b981', fontWeight: '500', marginTop: '0.25rem'}}>
-                                                        ⏰ {t('time')} {apt.time}
-                                                    </div>
-                                                </div>
-                                                {index === 0 && (
-                                                    <span style={{
-                                                        backgroundColor: '#fef3c7',
-                                                        color: '#d97706',
-                                                        padding: '0.25rem 0.5rem',
-                                                        borderRadius: '4px',
-                                                        fontSize: '0.7rem',
-                                                        fontWeight: '600'
-                                                    }}>
-                                                        {t('primary')}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        )
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        <div style={{display: 'flex', alignItems: 'center', gap: '0.75rem'}}>
+                        <div style={{ ...infoTileStyle, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2">
                                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
                                 <circle cx="12" cy="7" r="4"/>
@@ -2117,7 +2134,7 @@ function ClinicDetail() {
                         </div>
 
                         {step1Data.selectedDoctor && (
-                            <div style={{display: 'flex', alignItems: 'center', gap: '0.75rem'}}>
+                                <div style={{ ...infoTileStyle, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2">
                                     <path d="M20 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
                                     <circle cx="12" cy="7" r="4"/>
@@ -2125,36 +2142,117 @@ function ClinicDetail() {
                                 <div style={{flex: 1}}>
                                     <div style={{fontSize: '0.75rem', color: '#6b7280'}}>{t('doctor')}</div>
                                     <div style={{fontSize: '0.95rem', color: '#1f2937', fontWeight: '500'}}>
-                                        {typeof step1Data.selectedDoctor === 'string' ? step1Data.selectedDoctor : step1Data.selectedDoctor.name}
+                                            {displayDoctor}
                                     </div>
                                 </div>
                             </div>
                         )}
                     </div>
+
+                        {selectedRounds.length > 0 && (
+                            <div
+                                style={{
+                                    marginTop: '1rem',
+                                    padding: '1rem',
+                                    backgroundColor: 'white',
+                                    borderRadius: '14px',
+                                    border: '1px solid #6ee7b7',
+                                    boxShadow: '0 8px 20px rgba(16, 185, 129, 0.08)',
+                                }}
+                            >
+                                <div style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.45rem',
+                                    fontSize: '0.95rem',
+                                    color: '#166534',
+                                    fontWeight: '700',
+                                    marginBottom: '0.9rem',
+                                }}>
+                                    <span style={{ fontSize: '1.1rem' }}>📅</span>
+                                    {t('selectedAppointmentRounds')}
+                                </div>
+
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                                    {selectedRounds.map((apt, index) => (
+                                        <div
+                                            key={index}
+                                            style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '0.8rem',
+                                                padding: '0.8rem 0.95rem',
+                                                backgroundColor: index === 0 ? '#ecfdf5' : '#f8fffc',
+                                                borderRadius: '10px',
+                                                border: index === 0 ? '1px solid #10b981' : '1px solid #d1fae5',
+                                            }}
+                                        >
+                                            <span style={{
+                                                backgroundColor: index === 0 ? '#059669' : '#34d399',
+                                                color: 'white',
+                                                padding: '0.35rem 0.7rem',
+                                                borderRadius: '999px',
+                                                fontSize: '0.75rem',
+                                                fontWeight: '700',
+                                                minWidth: '72px',
+                                                textAlign: 'center',
+                                            }}>
+                                                {t('round')} {index + 1}
+                                            </span>
+
+                                            <div style={{ flex: 1 }}>
+                                                <div style={{ fontSize: '0.92rem', color: '#1f2937', fontWeight: 600 }}>
+                                                    {formatDate(apt.date)}
+                                                </div>
+                                                <div style={{ fontSize: '0.83rem', color: '#059669', fontWeight: 600, marginTop: '0.2rem' }}>
+                                                    {t('time')} {apt.time}
+                                                </div>
+                                            </div>
+
+                                            {index === 0 && (
+                                                <span style={{
+                                                    backgroundColor: '#fef3c7',
+                                                    color: '#b45309',
+                                                    padding: '0.2rem 0.5rem',
+                                                    borderRadius: '6px',
+                                                    fontSize: '0.7rem',
+                                                    fontWeight: '700',
+                                                }}>
+                                                    {t('primary')}
+                                                </span>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                 </div>
 
                 <button 
                     style={{
                         width: '100%',
-                        padding: '0.875rem',
-                        backgroundColor: '#1e40af',
+                            padding: '0.95rem',
+                            background: 'linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%)',
                         color: 'white',
                         border: 'none',
-                        borderRadius: '8px',
+                            borderRadius: '12px',
                         fontSize: '1rem',
-                        fontWeight: '600',
+                            fontWeight: '700',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         gap: '0.5rem',
-                        transition: 'all 0.2s'
+                            transition: 'all 0.2s',
+                            boxShadow: '0 12px 20px rgba(29, 78, 216, 0.25)',
                     }}
                     onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = '#1e3a8a';
+                            e.currentTarget.style.transform = 'translateY(-1px)';
+                            e.currentTarget.style.boxShadow = '0 14px 24px rgba(29, 78, 216, 0.3)';
                     }}
                     onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = '#1e40af';
+                            e.currentTarget.style.transform = 'translateY(0)';
+                            e.currentTarget.style.boxShadow = '0 12px 20px rgba(29, 78, 216, 0.25)';
                     }}
                     onClick={() => navigate('/patient/appointments')}
                 >
