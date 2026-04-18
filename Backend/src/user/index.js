@@ -161,6 +161,20 @@ async function initializeDatabase() {
     await dbRun(`ALTER TABLE doctors DROP COLUMN IF EXISTS license_number`);
     await dbRun(`ALTER TABLE doctors DROP COLUMN IF EXISTS experience_years`);
     console.log('Doctors table ready.');
+
+    // สร้างตาราง favorites สำหรับระบบโปรด
+    await dbRun(`
+      CREATE TABLE IF NOT EXISTS favorites (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL,
+        hospital_id INTEGER NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_id, hospital_id),
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+        FOREIGN KEY (hospital_id) REFERENCES hospitals (id) ON DELETE CASCADE
+      )
+    `);
+    console.log('Favorites table ready.');
   } catch (err) {
     console.error('Database initialization error:', err);
     process.exit(1);

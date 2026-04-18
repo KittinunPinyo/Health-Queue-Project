@@ -107,5 +107,58 @@ export function createHospitalsRouter({ dbGet, dbAll, dbRun, dbInsert }) {
     }
   });
 
+  router.post('/:id/favorite', async (req, res) => {
+    try {
+      const { userId } = req.body;
+      if (!userId) {
+        return res.status(400).json({ error: 'userId is required' });
+      }
+
+      const hospital = await dbGet('SELECT id FROM hospitals WHERE id = ?', [req.params.id]);
+      if (!hospital) return res.status(404).json({ error: 'Hospital not found' });
+
+      const existing = await dbGet(
+        'SELECT id FROM favorites WHERE user_id = ? AND hospital_id = ?',
+        [userId, req.params.id]
+      );
+      
+      if (existing) {
+        return res.status(200).json({ message: 'Already in favorites', isFavorite: true });
+      }
+
+      await dbRun(
+        'INSERT INTO favorites (user_id, hospital_id) VALUES (?, ?)',
+        [userId, req.params.id]
+      );
+
+      return res.status(201).json({ message: 'Added to favorites', isFavorite: true });
+    } catch (err) {
+      console.error('POST /api/hospitals/:id/favorite error:', err);
+      return res.status(500).json({ error: 'Unable to add to favorites' });
+    }
+  });
+
+  router.delete('/:id/favorite', async (req, res) => {
+    try {
+      const { userId } = req.body;
+      if (!userId) {
+        return res.status(400).json({ error: 'userId is required' });
+      }
+
+      const hospital = await dbGet('SELECT id FROM hospitals WHERE id = ?', [req.params.id]);
+      if (!hospital) return res.status(404).json({ error: 'Hospital not found' });
+
+      await dbRun(
+        'DELETE FROM favorites WHERE user_id = ? AND hospital_id = ?',
+        [userId, req.params.id]
+      );
+
+      return res.json({ message: 'Removed from favorites', isFavorite: false });
+    } catch (err) {
+      console.error('DELETE /api/hospitals/:id/favorite error:', err);
+      return res.status(500).json({ error: 'Unable to remove from favorites' });
+    }
+  });
+
   return router;
 }

@@ -101,6 +101,7 @@ function ClinicDetail() {
     const [clinicsData, setClinicsData] = useState([]);
     const [currentUser, setCurrentUser] = useState(null);
     const [selectedClinicId, setSelectedClinicId] = useState(null);
+    const [favorites, setFavorites] = useState([]);
     
     const [step1Data, setStep1Data] = useState({ 
         appointmentType: '',
@@ -247,12 +248,50 @@ function ClinicDetail() {
 
     init();
 
-    }, [navigate]); 
+    }, [navigate]);
+
+    // ดึงรายชื่อโปรดของผู้ใช้
+    useEffect(() => {
+        if (currentUser?.id) {
+            axios.get(`/api/users/${currentUser.id}/favorites`)
+                .then(res => {
+                    const favoriteIds = (res.data.favorites || []).map(h => h.id);
+                    setFavorites(favoriteIds);
+                })
+                .catch(err => console.log('Cannot fetch favorites:', err.message));
+        }
+    }, [currentUser?.id]);
 
     const clinic = useMemo(() => {
         if (!selectedClinicId) return null;
         return clinicsData.find(c => c.id == selectedClinicId);
     }, [clinicsData, selectedClinicId]);
+
+    const toggleFavorite = async (hospitalId) => {
+        if (!currentUser?.id) {
+            alert(t('pleaseLoginFirst') || 'กรุณาเข้าสู่ระบบก่อน');
+            return;
+        }
+
+        try {
+            if (favorites.includes(hospitalId)) {
+                // ลบออกจากโปรด
+                await axios.delete(`/api/hospitals/${hospitalId}/favorite`, {
+                    data: { userId: currentUser.id }
+                });
+                setFavorites(favorites.filter(id => id !== hospitalId));
+            } else {
+                // เพิ่มเข้าโปรด
+                await axios.post(`/api/hospitals/${hospitalId}/favorite`, {
+                    userId: currentUser.id
+                });
+                setFavorites([...favorites, hospitalId]);
+            }
+        } catch (error) {
+            console.error('Error toggling favorite:', error);
+            alert(t('error') || 'เกิดข้อผิดพลาด');
+        }
+    };
 
     const handleNext = () => {
         if (currentStep === 1) {
@@ -2134,8 +2173,30 @@ function ClinicDetail() {
                 <div style={styles.header}>
                     <h1 style={styles.title}>{t('makeAppointment')}</h1>
                 </div>
-                <div style={{textAlign: 'center'}}>
-                    <div style={styles.subtitle}>{t('hospital')} {clinic.name}</div>
+                <div style={{textAlign: 'center', position: 'relative'}}>
+                    <div style={styles.subtitle}>
+                        {t('hospital')} {clinic.name}
+                        <button
+                            onClick={() => toggleFavorite(clinic.id)}
+                            style={{
+                                marginLeft: '1rem',
+                                padding: '0.5rem 1rem',
+                                backgroundColor: favorites.includes(clinic.id) ? '#ff6b6b' : '#ddd',
+                                color: favorites.includes(clinic.id) ? 'white' : '#333',
+                                border: 'none',
+                                borderRadius: '50%',
+                                width: '40px',
+                                height: '40px',
+                                cursor: 'pointer',
+                                fontSize: '1.2rem',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                            }}
+                        >
+                            {favorites.includes(clinic.id) ? '❤️' : '🤍'}
+                        </button>
+                    </div>
                 </div>
 
                 <div style={styles.clinicCard}>

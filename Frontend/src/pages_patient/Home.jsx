@@ -40,6 +40,7 @@ function Home() {
     const [filteredClinics, setFilteredClinics] = useState([]);
     const [searchInput, setSearchInput] = useState('');
     const [currentUser, setCurrentUser] = useState(null);
+    const [favorites, setFavorites] = useState([]);
     const [departments, setDepartments] = useState([]);
     const [locations, setLocations] = useState([t('all')]); 
     const [activeLocation, setActiveLocation] = useState(t('all'));
@@ -131,6 +132,17 @@ function Home() {
         loadData();
     }, [location.pathname, t]);
 
+    // ดึงรายชื่อโปรดของผู้ใช้
+    useEffect(() => {
+        if (currentUser?.id) {
+            axios.get(`/api/users/${currentUser.id}/favorites`)
+                .then(res => {
+                    const favoriteIds = (res.data.favorites || []).map(h => h.id);
+                    setFavorites(favoriteIds);
+                })
+                .catch(err => console.log('Cannot fetch favorites:', err.message));
+        }
+    }, [currentUser?.id]);
 
     // --- Filter Logic (เฉพาะการเลือกโรงพยาบาล/ทำเล) ---
     useEffect(() => {
@@ -144,6 +156,33 @@ function Home() {
 
 
     // --- Handlers ---
+    const toggleFavorite = async (hospitalId, e) => {
+        e?.stopPropagation();
+        if (!currentUser?.id) {
+            alert(t('pleaseLoginFirst') || 'กรุณาเข้าสู่ระบบก่อน');
+            return;
+        }
+
+        try {
+            if (favorites.includes(hospitalId)) {
+                // ลบออกจากโปรด
+                await axios.delete(`/api/hospitals/${hospitalId}/favorite`, {
+                    data: { userId: currentUser.id }
+                });
+                setFavorites(favorites.filter(id => id !== hospitalId));
+            } else {
+                // เพิ่มเข้าโปรด
+                await axios.post(`/api/hospitals/${hospitalId}/favorite`, {
+                    userId: currentUser.id
+                });
+                setFavorites([...favorites, hospitalId]);
+            }
+        } catch (error) {
+            console.error('Error toggling favorite:', error);
+            alert(t('error') || 'เกิดข้อผิดพลาด');
+        }
+    };
+
     const handleSelectClinic = (id) => {
         localStorage.setItem('selectedClinicId', id);
         navigate('/patient/clinic-detail'); 
@@ -505,6 +544,23 @@ function Home() {
                                         <div className="hospital-doctor-badge" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#3b82f6', fontWeight: '500' }}>
                                             <span>👨‍⚕️</span> <span style={{ fontSize: '14px' }}>{c.doctors?.length || 0} {t('allDoctors')}</span>
                                         </div>
+                                        <button
+                                            onClick={(e) => toggleFavorite(c.id, e)}
+                                            style={{
+                                                padding: '0.5rem',
+                                                backgroundColor: 'transparent',
+                                                color: favorites.includes(c.id) ? '#ff6b6b' : '#ddd',
+                                                border: 'none',
+                                                cursor: 'pointer',
+                                                fontSize: '1.5rem',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                transition: 'all 0.3s ease'
+                                            }}
+                                        >
+                                            {favorites.includes(c.id) ? '❤️' : '🤍'}
+                                        </button>
                                     </div>
                                 </div>
                             ))

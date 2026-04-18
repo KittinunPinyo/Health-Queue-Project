@@ -354,5 +354,25 @@ export function createUserRouter({ dbGet, dbAll, dbRun, jwtSecret }) {
     }
   });
 
+  // ดึงรายชื่อโปรดของผู้ใช้: GET /:id/favorites
+  router.get('/:id/favorites', async (req, res) => {
+    try {
+      const userId = req.params.id;
+      
+      const favorites = await dbAll(
+        `SELECT h.* FROM hospitals h
+         INNER JOIN favorites f ON h.id = f.hospital_id
+         WHERE f.user_id = ?
+         ORDER BY f.created_at DESC`,
+        [userId]
+      );
+
+      return res.json({ favorites, count: favorites.length });
+    } catch (error) {
+      console.error('GET /api/users/:id/favorites error:', error);
+      return res.status(500).json({ error: 'Unable to fetch favorites' });
+    }
+  });
+
   return router;
 }

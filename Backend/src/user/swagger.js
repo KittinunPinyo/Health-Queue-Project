@@ -905,6 +905,110 @@ export const openApiDocument = {
         },
       },
     },
+    '/api/hospitals/{id}/favorite': {
+      post: {
+        tags: ['Hospitals'],
+        summary: 'เพิ่มโรงพยาบาลเข้าโปรด',
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'integer' },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['userId'],
+                properties: {
+                  userId: { type: 'integer', example: 1 },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: 'เพิ่มโปรดสำเร็จ',
+          },
+          200: {
+            description: 'มีในโปรดแล้ว',
+          },
+          400: { description: 'userId is required' },
+          404: { description: 'Hospital not found' },
+        },
+      },
+      delete: {
+        tags: ['Hospitals'],
+        summary: 'ลบโรงพยาบาลออกจากโปรด',
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'integer' },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['userId'],
+                properties: {
+                  userId: { type: 'integer', example: 1 },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'ลบออกจากโปรดสำเร็จ',
+          },
+          400: { description: 'userId is required' },
+          404: { description: 'Hospital not found' },
+        },
+      },
+    },
+    '/api/users/{id}/favorites': {
+      get: {
+        tags: ['Users'],
+        summary: 'ดึงรายชื่อโปรดของผู้ใช้',
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'integer' },
+          },
+        ],
+        responses: {
+          200: {
+            description: 'รายชื่อโปรด',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    favorites: {
+                      type: 'array',
+                      items: { $ref: '#/components/schemas/Hospital' },
+                    },
+                    count: { type: 'integer' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
     '/api/doctors': {
       get: {
         tags: ['Doctors'],
