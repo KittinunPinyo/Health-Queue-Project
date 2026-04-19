@@ -5,7 +5,22 @@ export function createHospitalsRouter({ dbGet, dbAll, dbRun, dbInsert }) {
 
   router.get('/', async (req, res) => {
     try {
-      const hospitals = await dbAll('SELECT * FROM hospitals ORDER BY id ASC');
+      const sort = String(req.query.sort || '').toLowerCase();
+      let hospitals;
+
+      if (sort === 'doctors') {
+        hospitals = await dbAll(`
+          SELECT h.*, COUNT(DISTINCT d.id) AS doctor_count, COUNT(DISTINCT f.id) AS favorite_count
+          FROM hospitals h
+          LEFT JOIN doctors d ON h.id = d.hospital_id
+          LEFT JOIN favorites f ON h.id = f.hospital_id
+          GROUP BY h.id
+          ORDER BY favorite_count DESC, doctor_count DESC, h.id ASC
+        `);
+      } else {
+        hospitals = await dbAll('SELECT * FROM hospitals ORDER BY id ASC');
+      }
+
       return res.json({ hospitals });
     } catch (err) {
       console.error('GET /api/hospitals error:', err);
