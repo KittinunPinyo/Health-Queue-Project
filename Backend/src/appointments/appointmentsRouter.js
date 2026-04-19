@@ -88,6 +88,7 @@ function mapAppointmentRow(row) {
     gender: row.gender || '',
     birthDate: normalizeDate(row.birth_date),
     nationality: row.nationality || '',
+    adminMessage: payload.adminMessage || '',
     confirmedRound: payload.confirmedRound ?? null,
     rejectionReason: payload.rejectionReason || '',
     createdAt: row.created_at,
@@ -286,6 +287,7 @@ export function createAppointmentsRouter({ dbAll, dbGet, dbRun, dbInsert }) {
         time,
         confirmedRound,
         rejectionReason,
+        adminMessage,
       } = req.body || {};
 
       const nextStatus = String(status || '').trim().toLowerCase();
@@ -316,13 +318,16 @@ export function createAppointmentsRouter({ dbAll, dbGet, dbRun, dbInsert }) {
         params.push(time ? normalizeTime(time) : null);
       }
 
-      if (confirmedRound !== undefined || rejectionReason !== undefined) {
+      if (confirmedRound !== undefined || rejectionReason !== undefined || adminMessage !== undefined) {
         const payload = normalizeObject(existing.booking_payload);
         if (confirmedRound !== undefined) {
           payload.confirmedRound = confirmedRound;
         }
         if (rejectionReason !== undefined) {
           payload.rejectionReason = rejectionReason;
+        }
+        if (adminMessage !== undefined) {
+          payload.adminMessage = String(adminMessage || '').trim();
         }
         updates.push('booking_payload = ?::jsonb');
         params.push(JSON.stringify(payload));

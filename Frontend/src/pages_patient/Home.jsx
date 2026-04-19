@@ -237,7 +237,7 @@ function Home() {
     };
     
     const welcomeName = currentUser ? currentUser.name : 'คุณผู้ใช้';
-    const displayedDoctors = showAllDoctors ? allDoctors : allDoctors.slice(0, 8);
+    const displayedDoctors = showAllDoctors ? allDoctors : allDoctors.slice(0, 4);
 
     return (
         <div style={{position: 'relative', minHeight: '100vh', background: '#f0f7ff', paddingTop: '72px', paddingBottom: '88px'}}>

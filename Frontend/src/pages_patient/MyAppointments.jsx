@@ -45,6 +45,10 @@ function AppointmentDetailModal({ appointment, user, isOpen, onClose }) {
     const doctorName = normalizeSelectableText(a.selectedDoctor || a.doctor?.name, notSelected);
     const requestedSlots = getRequestedTimeSlots(a);
     const isPending = a.status === 'new' || a.status === 'approved';
+    const adminDetailLabel = a.status === 'confirmed' ? 'แจ้งรายละเอียดคนไข้' : t('adminReason');
+    const adminDetailText = a.status === 'confirmed'
+        ? (a.adminMessage || a.rejectionReason || '-')
+        : (a.rejectionReason || '-');
 
     let statusHtml = '';
     if (a.status === 'confirmed') {
@@ -92,7 +96,7 @@ function AppointmentDetailModal({ appointment, user, isOpen, onClose }) {
                     ) : (
                         <p className="appointment-detail-row"><strong>{t('dateTime')}:</strong> {a.date || '-'} {t('time')} {a.time || '-'}</p>
                     )}
-                    <p className="appointment-detail-row"><strong>{t('adminReason')}:</strong> {a.rejectionReason || '-'}</p>
+                    <p className="appointment-detail-row"><strong>{adminDetailLabel}:</strong> {adminDetailText}</p>
                 </div>
             </div>
         </div>

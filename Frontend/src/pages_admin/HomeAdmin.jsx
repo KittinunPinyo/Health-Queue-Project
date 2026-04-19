@@ -258,7 +258,7 @@ function HomeAdmin() {
         const symptoms = request.symptoms || 'ไม่มี';
         const patient = users.find(u => u.id === request.patient?.id);
         const targetEmail = request.patient?.email || patient?.email;
-        const adminNote = adminMessages[id] || '-';
+        const adminNote = String(adminMessages[id] || '').trim();
 
         // ดึงรอบนัดหมายที่ Admin เลือก (default = รอบแรก)
         const selectedRoundIndex = selectedAppointmentRounds[id] ?? 0;
@@ -296,7 +296,7 @@ function HomeAdmin() {
                 admin_message: adminNote 
             });
             
-            const message = `นัดหมายของคุณกับ ${doctorName} ได้รับการ "ยืนยัน" แล้ว วันที่ ${appointmentDate} เวลา ${appointmentTime} (ดูรายละเอียดในอีเมล)`;
+            const message = adminNote || `นัดหมายของคุณกับ ${doctorName} ได้รับการ "ยืนยัน" แล้ว วันที่ ${appointmentDate} เวลา ${appointmentTime} (ดูรายละเอียดในอีเมล)`;
             createNotification(request.patient.id, 'confirmed', message);
             
             // อัพเดท request ด้วยรอบที่เลือก (sync ไป API ก่อน)
@@ -305,6 +305,7 @@ function HomeAdmin() {
                 date: appointmentDate,
                 time: appointmentTime,
                 confirmedRound: selectedRoundIndex + 1,
+                adminMessage: adminNote,
             });
 
             updateRequestStatusWithRound(id, 'confirmed', appointmentDate, appointmentTime, selectedRoundIndex, syncedAppointment);
