@@ -147,10 +147,6 @@ export function createAuthRouter({ dbGet, dbInsert, jwtSecret }) {
     }
   });
 
-  router.post('/logout', createAuthenticateToken(jwtSecret), (req, res) => {
-    res.json({ message: 'Logged out successfully' });
-  });
-
   router.get('/profile', createAuthenticateToken(jwtSecret), async (req, res) => {
     try {
       const user = await dbGet(
@@ -165,6 +161,10 @@ export function createAuthRouter({ dbGet, dbInsert, jwtSecret }) {
       console.error('Auth profile error:', error);
       return res.status(500).json({ error: 'Internal server error' });
     }
+  });
+
+  router.post('/logout', createAuthenticateToken(jwtSecret), (req, res) => {
+    res.json({ message: 'Logged out successfully' });
   });
 
   return router;
@@ -342,17 +342,7 @@ export function createUserRouter({ dbGet, dbAll, dbRun, jwtSecret }) {
     }
   });
 
-  router.get('/profile', authenticateToken, async (req, res) => {
-    try {
-      const user = await getUserById(req.user.id);
-      if (!user) return res.status(404).json({ error: 'User not found' });
-      return res.json({ user });
-    } catch (error) {
-      console.error('Profile error:', error);
-      return res.status(500).json({ error: 'Internal server error' });
-    }
-  });
-
+  // GET /profile has been removed intentionally to prevent exposing the authenticated user profile via this route.
   router.put('/profile', authenticateToken, async (req, res) => {
     try {
       const user = await updateUserProfile(req.user.id, req.body || {});

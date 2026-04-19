@@ -499,43 +499,8 @@ export const openApiDocument = {
         },
       },
     },
+
     '/api/user/profile': {
-      get: {
-        tags: ['Auth'],
-        summary: 'ดูข้อมูลโปรไฟล์ของผู้ใช้ที่ล็อกอินผ่าน /api/user/profile',
-        security: [{ bearerAuth: [] }],
-        responses: {
-          200: {
-            description: 'ข้อมูลโปรไฟล์ผู้ใช้',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    user: { $ref: '#/components/schemas/UserProfile' },
-                  },
-                },
-              },
-            },
-          },
-          401: {
-            description: 'ไม่มีโทเค็นยืนยันตัวตน',
-            content: {
-              'application/json': {
-                schema: { $ref: '#/components/schemas/ErrorResponse' },
-              },
-            },
-          },
-          404: {
-            description: 'ไม่พบผู้ใช้',
-            content: {
-              'application/json': {
-                schema: { $ref: '#/components/schemas/ErrorResponse' },
-              },
-            },
-          },
-        },
-      },
       put: {
         tags: ['Auth'],
         summary: 'แก้ไขข้อมูลโปรไฟล์ของผู้ใช้ที่ล็อกอิน',
@@ -590,6 +555,7 @@ export const openApiDocument = {
         },
       },
     },
+
     '/api/user/password': {
       put: {
         tags: ['Auth'],
