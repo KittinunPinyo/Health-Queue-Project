@@ -23,7 +23,7 @@ function SearchResults() {
       try {
         const [hospitalsRes, doctorsRes] = await Promise.all([
           axios.get('/api/hospitals'),
-          axios.get('/api/doctors'),
+          axios.get('/api/doctors?sort=popular'),
         ]);
         const hospitals = hospitalsRes.data.hospitals || [];
         const doctors = doctorsRes.data.doctors || [];
@@ -38,6 +38,7 @@ function SearchResults() {
             specialty: doctor.specialty || '',
             email: doctor.email || '',
             image: doctor.image || '',
+            appointmentCount: Number(doctor.appointmentCount ?? doctor.appointment_count ?? 0),
           });
           return acc;
         }, {});
@@ -49,6 +50,10 @@ function SearchResults() {
           doctors: doctorsByHospital[String(h.id)] || [],
           ...h,
         }));
+
+        clinics.forEach((clinic) => {
+          clinic.doctors = (clinic.doctors || []).slice().sort((a, b) => (b.appointmentCount || 0) - (a.appointmentCount || 0));
+        });
       } catch (error) {
         console.error('Search load hospitals/doctors error:', error);
         clinics = [];
@@ -84,6 +89,8 @@ function SearchResults() {
           }
         });
       });
+
+      matchedDoctors.sort((a, b) => (b.appointmentCount || 0) - (a.appointmentCount || 0));
 
       setClinicResults(matchedClinics);
       setDoctorResults(matchedDoctors);
@@ -194,14 +201,20 @@ function SearchResults() {
             <div className="doctor-grid">
               {doctorResults.map((doctor) => (
                 <div key={`${doctor.clinicId}-${doctor.id}`} className="doctor-card">
-                  <div>
-                    <h3>{doctor.name}</h3>
-                    <p>{doctor.specialty || t('noDepartment', 'ยังไม่มีข้อมูลแผนก')}</p>
-                    <span>{doctor.clinicName}</span>
+                  <div className="doctor-card-image">
+                    <img src={doctor.image || 'https://placehold.co/150x150/e0e7ff/6366f1?text=Doctor'} alt={doctor.name} />
                   </div>
-                  <button onClick={() => handleBookDoctor(doctor)}>
-                    {t('bookNow', 'จองเลย')}
-                  </button>
+                  <h3>{doctor.name}</h3>
+                  <p className="doctor-specialty">{doctor.specialty || t('noDepartment', 'ยังไม่มีข้อมูลแผนก')}</p>
+                  <span className="doctor-clinic">{doctor.clinicName}</span>
+                  <div className="doctor-card-actions">
+                    <button className="btn-book" onClick={() => handleBookDoctor(doctor)}>
+                      📅 {t('bookNow', 'นัดหมาย')}
+                    </button>
+                    <button className="btn-details">
+                      📋 {t('details', 'รายละเอียด')}
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>

@@ -88,6 +88,7 @@ function Home() {
                         specialty: doctor.specialty || '',
                         email: doctor.email || '',
                         image: doctor.image || '',
+                        appointmentCount: Number(doctor.appointmentCount ?? doctor.appointment_count ?? 0),
                     });
                     return acc;
                 }, {});
@@ -113,6 +114,8 @@ function Home() {
                         if (doc.specialty) activeSpecialties.add(doc.specialty.trim());
                     });
                 });
+
+                doctorsList.sort((a, b) => (b.appointmentCount || 0) - (a.appointmentCount || 0));
 
                 setAllDoctors(doctorsList);
                 const dynamicDepartments = Array.from(activeSpecialties).map((specialty, index) => ({

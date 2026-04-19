@@ -244,7 +244,7 @@ function ClinicDetail() {
             try {
                 const [hospitalsRes, doctorsRes] = await Promise.all([
                     axios.get('/api/hospitals'),
-                    axios.get('/api/doctors'),
+                    axios.get('/api/doctors?sort=popular'),
                 ]);
                 const hospitals = hospitalsRes.data.hospitals || [];
                 const doctors = doctorsRes.data.doctors || [];
@@ -259,6 +259,7 @@ function ClinicDetail() {
                         specialty: doctor.specialty || '',
                         email: doctor.email || '',
                         image: doctor.image || '',
+                        appointmentCount: Number(doctor.appointmentCount ?? doctor.appointment_count ?? 0),
                     });
                     return acc;
                 }, {});
@@ -275,7 +276,7 @@ function ClinicDetail() {
                         nurse_phone: h.nurse_phone || local.nurse_phone || '',
                         email: h.email || local.email || '',
                         website: h.website || local.website || '',
-                        doctors: doctorsByHospital[String(h.id)] || local.doctors || [],
+                        doctors: (doctorsByHospital[String(h.id)] || local.doctors || []).slice().sort((a, b) => (b.appointmentCount || 0) - (a.appointmentCount || 0)),
                     };
                 });
                 localStorage.setItem('clinicsData', JSON.stringify(clinics));

@@ -634,10 +634,8 @@ function Clinics() {
                         </p>
                     </div>
                     
-                    {/* Layout 2 คอลัมน์ */}
-                    <div style={{display: 'grid', gridTemplateColumns: '480px 1fr', gap: '1.5rem', alignItems: 'start'}}>
-                        
-                        {/* คอลัมน์ซ้าย - แก้ไขคลินิก + เพิ่มแพทย์ */}
+                    {/* Layout 2 คอลัมน์: แก้ไขโรงพยาบาล/คลินิก กับ เพิ่มแพทย์ใหม่ อยู่ข้างกัน */}
+                    <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', alignItems: 'start'}}>
                         <div>
                             <div style={{
                                 background: 'white',
@@ -701,14 +699,15 @@ function Clinics() {
                                     color: 'white', border: 'none', borderRadius: '12px', fontWeight: 600, cursor: 'pointer', fontSize: '1.1rem'
                                 }}>🗑️ ลบโรงพยาบาล/คลินิกนี้</button>
                             </div>
-                            
+                        </div>
+                        
+                        <div>
                             <div style={{
                                 background: 'white',
                                 borderRadius: '20px',
                                 padding: '2rem',
                                 boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
-                                border: '1px solid #e5e7eb',
-                                marginTop: '1.5rem'
+                                border: '1px solid #e5e7eb'
                             }}>
                                 <h4 style={{margin: '0 0 1.5rem 0', color: '#1f2937', fontSize: '1.3rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.75rem'}}>
                                     <span style={{background: '#dcfce7', padding: '0.5rem', borderRadius: '10px', display: 'flex'}}>
@@ -789,10 +788,11 @@ function Clinics() {
                                 </form>
                             </div>
                         </div>
-                        
-                        {/* คอลัมน์ขวา - รายชื่อแพทย์ */}
-                        <div style={{
-                            background: 'white',
+                    </div>
+                    
+                    {/* รายชื่อแพทย์ในโรงพยาบาล/คลินิกนี้ */}
+                    <div style={{
+                        background: 'white',
                             borderRadius: '20px',
                             padding: '2rem',
                             boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
@@ -845,9 +845,9 @@ function Clinics() {
                                 </div>
                             )}
 
-                            <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', maxHeight: '700px', overflowY: 'auto', padding: '0.75rem'}}>
+                            <div style={{display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem', maxHeight: '700px', overflowY: 'auto', padding: '0.75rem'}}>
                                 {filteredDoctors.length === 0 ? (
-                                    <div style={{textAlign: 'center', padding: '4rem 2rem', color: '#9ca3af', gridColumn: 'span 2', background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)', borderRadius: '20px'}}>
+                                    <div style={{textAlign: 'center', padding: '4rem 2rem', color: '#9ca3af', gridColumn: 'span 4', background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)', borderRadius: '20px'}}>
                                         <div style={{width: '80px', height: '80px', margin: '0 auto 1.5rem', background: 'linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
                                             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="1.5">
                                                 <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
@@ -976,8 +976,6 @@ function Clinics() {
                                 }
                             `}</style>
                         </div>
-                        
-                    </div>
                     
                 </main>
                 
