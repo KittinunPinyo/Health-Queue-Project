@@ -28,23 +28,33 @@ const TrashIcon = () => (
 
 // --- Component: Stat Card ---
 const StatCard = ({ title, value, icon: Icon, color1, color2, onClick, isActive }) => {
+    const [isHovered, setIsHovered] = useState(false);
+    const cardLift = isHovered ? -7 : (isActive ? -2 : 0);
+
     return (
         <div style={{
             background: `linear-gradient(135deg, ${color1} 0%, ${color2} 100%)`,
-            borderRadius: '16px',
-            padding: '20px',
+            borderRadius: '18px',
+            padding: '18px 20px',
             color: 'white',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
-            height: '120px',
-            boxShadow: isActive ? '0 0 0 4px rgba(59, 130, 246, 0.35), 0 10px 22px rgba(0,0,0,0.18)' : '0 4px 15px rgba(0,0,0,0.1)',
+            minHeight: '128px',
+            border: isActive ? '2px solid rgba(255,255,255,0.45)' : '2px solid rgba(255,255,255,0.14)',
+            boxShadow: isHovered
+                ? '0 16px 34px rgba(15,23,42,0.26)'
+                : isActive
+                ? '0 0 0 4px rgba(59, 130, 246, 0.32), 0 14px 30px rgba(15,23,42,0.22)'
+                : '0 10px 22px rgba(15,23,42,0.16)',
             position: 'relative',
             overflow: 'hidden',
             cursor: 'pointer',
-            transform: isActive ? 'translateY(-2px)' : 'none',
-            transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+            transform: `translateY(${cardLift}px) scale(${isHovered ? 1.01 : 1})`,
+            transition: 'transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease'
         }}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
         onClick={onClick}
         role="button"
         tabIndex={0}
@@ -55,26 +65,36 @@ const StatCard = ({ title, value, icon: Icon, color1, color2, onClick, isActive 
             }
         }}>
             <div style={{ zIndex: 2 }}>
-                <h2 style={{ fontSize: '2.5rem', fontWeight: 'bold', margin: 0, lineHeight: 1 }}>{value}</h2>
-                <p style={{ fontSize: '0.9rem', opacity: 0.9, marginTop: '8px', fontWeight: '500' }}>{title}</p>
+                <h2 style={{ fontSize: '2.7rem', fontWeight: '800', margin: 0, lineHeight: 1 }}>{value}</h2>
+                <p style={{ fontSize: '1rem', opacity: 0.95, marginTop: '8px', fontWeight: '700' }}>{title}</p>
             </div>
             {/* Background Icon Decoration */}
             <div style={{
                 position: 'absolute',
-                right: '-10px',
-                bottom: '-10px',
-                opacity: 0.2,
-                transform: 'scale(3)',
+                right: '-12px',
+                bottom: '-16px',
+                opacity: 0.14,
+                transform: 'scale(3.4)',
                 color: 'white'
             }}>
                 <Icon />
             </div>
+            <div style={{
+                position: 'absolute',
+                top: '-24px',
+                right: '-24px',
+                width: '94px',
+                height: '94px',
+                borderRadius: '50%',
+                background: 'rgba(255,255,255,0.12)'
+            }} />
             {/* Small Icon Badge */}
             <div style={{
                 position: 'absolute',
-                right: '15px',
-                bottom: '15px',
-                background: 'rgba(255,255,255,0.2)',
+                right: '14px',
+                bottom: '12px',
+                background: 'rgba(255,255,255,0.24)',
+                border: '1px solid rgba(255,255,255,0.35)',
                 borderRadius: '50%',
                 width: '32px',
                 height: '32px',
@@ -83,7 +103,9 @@ const StatCard = ({ title, value, icon: Icon, color1, color2, onClick, isActive 
                 justifyContent: 'center',
                 backdropFilter: 'blur(5px)'
             }}>
-                <Icon />
+                <div style={{ transform: 'scale(0.72)' }}>
+                    <Icon />
+                </div>
             </div>
         </div>
     );
@@ -442,38 +464,61 @@ function Appointments() {
 
     // --- Styles ---
     const styles = {
-        page: { padding: '20px', background: '#f9fafb', minHeight: '100vh', fontFamily: "'Prompt', sans-serif" },
-        header: { marginBottom: '24px' },
-        title: { fontSize: '24px', fontWeight: 'bold', color: '#1e293b' },
+        page: {
+            minHeight: '100vh',
+            background: 'linear-gradient(180deg, #eff6ff 0%, #f8fafc 55%, #ffffff 100%)',
+            padding: '0.5rem 0.4rem 2.2rem',
+            fontFamily: "'Prompt', sans-serif"
+        },
+        container: { maxWidth: '1400px', margin: '0 auto' },
         banner: {
-            background: 'linear-gradient(90deg, #2563eb 0%, #3b82f6 100%)',
-            borderRadius: '16px',
-            padding: '24px 30px',
+            background: 'linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)',
+            borderRadius: '24px',
+            padding: '24px 28px',
             color: 'white',
             display: 'flex',
             alignItems: 'center',
-            marginBottom: '30px',
-            boxShadow: '0 4px 20px rgba(37, 99, 235, 0.2)'
+            marginBottom: '20px',
+            boxShadow: '0 24px 60px rgba(59, 130, 246, 0.18)',
+            position: 'relative',
+            overflow: 'hidden'
+        },
+        bannerOrbRight: {
+            position: 'absolute', right: '-64px', top: '-64px', width: '180px', height: '180px', borderRadius: '50%', background: 'rgba(255,255,255,0.12)'
+        },
+        bannerOrbLeft: {
+            position: 'absolute', left: '-40px', bottom: '-40px', width: '120px', height: '120px', borderRadius: '50%', background: 'rgba(255,255,255,0.08)'
         },
         bannerIcon: {
             background: 'rgba(255,255,255,0.2)',
-            borderRadius: '12px',
-            width: '48px',
-            height: '48px',
+            borderRadius: '18px',
+            width: '56px',
+            height: '56px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            marginRight: '20px'
+            marginRight: '18px',
+            zIndex: 1
+        },
+        bannerContent: {
+            position: 'relative',
+            zIndex: 1
+        },
+        bannerChip: {
+            display: 'inline-flex', alignItems: 'center', gap: '8px',
+            background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)',
+            borderRadius: '999px', padding: '6px 16px', marginBottom: '10px',
+            fontSize: '12px', fontWeight: 700
         },
         statsGrid: {
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-            gap: '20px',
-            marginBottom: '30px'
+            gap: '16px',
+            marginBottom: '24px'
         },
         filters: {
-            background: 'white',
-            padding: '20px 24px',
+            background: 'rgba(255,255,255,0.86)',
+            padding: '12px',
             borderRadius: '20px',
             marginBottom: '24px',
             boxShadow: '0 14px 38px rgba(15, 23, 42, 0.08)',
@@ -512,8 +557,8 @@ function Appointments() {
         searchInput: {
             width: '100%',
             padding: '10px 14px 10px 40px',
-            borderRadius: '8px',
-            border: '1.5px solid #e5e7eb',
+            borderRadius: '10px',
+            border: '1.5px solid #d1d5db',
             fontSize: '14px',
             outline: 'none',
             transition: 'all 0.2s',
@@ -521,11 +566,11 @@ function Appointments() {
             boxSizing: 'border-box'
         },
         tableContainer: {
-            background: 'white',
-            borderRadius: '16px',
-            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
+            background: 'rgba(255,255,255,0.88)',
+            borderRadius: '20px',
+            boxShadow: '0 14px 28px rgba(15, 23, 42, 0.08)',
             overflow: 'hidden',
-            border: '1px solid #f1f5f9'
+            border: '1px solid #e2e8f0'
         },
         table: {
             width: '100%',
@@ -538,7 +583,7 @@ function Appointments() {
             color: '#64748b',
             fontWeight: '600',
             fontSize: '0.85rem',
-            backgroundColor: '#f8fafc'
+            backgroundColor: '#f8fbff'
         },
         td: {
             padding: '16px 24px',
@@ -575,14 +620,18 @@ function Appointments() {
 
     return (
         <div style={styles.page}>
+            <div style={styles.container}>
             {/* Blue Banner */}
             <div style={styles.banner}>
+                <div style={styles.bannerOrbRight} />
+                <div style={styles.bannerOrbLeft} />
                 <div style={styles.bannerIcon}>
                     <UsersIcon />
                 </div>
-                <div>
-                    <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: '0 0 4px 0' }}>จัดการข้อมูลคนไข้</h2>
-                    <p style={{ margin: 0, opacity: 0.9, fontSize: '0.95rem' }}>ดูแลและจัดการรายชื่อผู้ใช้ทั้งหมดในระบบ</p>
+                <div style={styles.bannerContent}>
+                    <div style={styles.bannerChip}>แดชบอร์ด</div>
+                    <h2 style={{ fontSize: '1.8rem', fontWeight: '800', margin: '0 0 4px 0', letterSpacing: '-0.03em' }}>จัดการข้อมูลคนไข้</h2>
+                    <p style={{ margin: 0, opacity: 0.9, fontSize: '0.94rem' }}>ดูแลและจัดการรายชื่อผู้ใช้ทั้งหมดในระบบ</p>
                 </div>
             </div>
 
@@ -783,6 +832,7 @@ function Appointments() {
                 error={historyError}
                 appointments={historyAppointments}
             />
+            </div>
         </div>
     );
 }

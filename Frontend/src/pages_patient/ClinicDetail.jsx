@@ -202,29 +202,36 @@ function ClinicDetail() {
                 user = readStoredUser();
             }
 
-            if (user) {
-                setCurrentUser(user);
-                const profile = user.healthProfile || {};
-                const [firstName = '', ...lastParts] = String(user.name || '').trim().split(' ');
-                const dobValue = normalizeDateInput(profile.dob || user.date_of_birth || user.dateOfBirth || '');
-                const genderValue = String(profile.gender || '').trim();
-                setStep3Data(prev => ({
-                    ...prev,
-                    firstName,
-                    lastName: lastParts.join(' '),
-                    email: user.email || '',
-                    phone: user.phone || '',
-                    idCard: user.idCard || '',
-                    gender: (genderValue === 'ชาย' || genderValue.toLowerCase() === 'male') ? 'male' : (genderValue === 'หญิง' || genderValue.toLowerCase() === 'female') ? 'female' : '',
-                    nationality: 'thai',
-                    relationship: 'self',
-                    birthDate: dobValue,
-                    birthYear: extractBirthYear(dobValue),
-                    name: user.name || ''
-                }));
-            } else {
+            if (!user) {
                 setCurrentUser(null);
+                navigate('/login', {
+                    replace: true,
+                    state: {
+                        from: { pathname: location.pathname },
+                    },
+                });
+                return;
             }
+
+            setCurrentUser(user);
+            const profile = user.healthProfile || {};
+            const [firstName = '', ...lastParts] = String(user.name || '').trim().split(' ');
+            const dobValue = normalizeDateInput(profile.dob || user.date_of_birth || user.dateOfBirth || '');
+            const genderValue = String(profile.gender || '').trim();
+            setStep3Data(prev => ({
+                ...prev,
+                firstName,
+                lastName: lastParts.join(' '),
+                email: user.email || '',
+                phone: user.phone || '',
+                idCard: user.idCard || '',
+                gender: (genderValue === 'ชาย' || genderValue.toLowerCase() === 'male') ? 'male' : (genderValue === 'หญิง' || genderValue.toLowerCase() === 'female') ? 'female' : '',
+                nationality: 'thai',
+                relationship: 'self',
+                birthDate: dobValue,
+                birthYear: extractBirthYear(dobValue),
+                name: user.name || ''
+            }));
 
             let clinics = JSON.parse(localStorage.getItem('clinicsData')) || [];
             const clinicId = localStorage.getItem('selectedClinicId');
@@ -307,7 +314,7 @@ function ClinicDetail() {
 
     init();
 
-    }, [navigate]);
+    }, [navigate, location.pathname]);
 
     // ดึงรายชื่อโปรดของผู้ใช้
     useEffect(() => {
@@ -411,7 +418,7 @@ function ClinicDetail() {
 
         if (!activeUser) {
             alert(t('pleaseLogin'));
-            navigate('/login', { state: { from: location.pathname } }); 
+            navigate('/login', { state: { from: { pathname: location.pathname } } }); 
             return;
         }
 
@@ -1997,6 +2004,20 @@ function ClinicDetail() {
         const displayDoctor = step1Data.selectedDoctor
             ? (typeof step1Data.selectedDoctor === 'string' ? step1Data.selectedDoctor : step1Data.selectedDoctor.name)
             : '';
+        const doctorSpecialty = step1Data.selectedDoctor && typeof step1Data.selectedDoctor === 'object'
+            ? String(step1Data.selectedDoctor.specialty || '').trim()
+            : '';
+        const selectedSpecialtyDetailLabel = step1Data.selectedSpecialtyDetail
+            ? t(step1Data.selectedSpecialtyDetail)
+            : '';
+        const selectedSpecialtyLabel =
+            step1Data.selectedSpecialty &&
+            step1Data.selectedSpecialty !== 'aiRecommend' &&
+            step1Data.selectedSpecialty !== 'notSure' &&
+            step1Data.selectedSpecialty !== 'selectDoctorSpecialty'
+                ? t(step1Data.selectedSpecialty)
+                : '';
+        const displayDepartment = selectedSpecialtyDetailLabel || selectedSpecialtyLabel || doctorSpecialty || '-';
 
         const infoTileStyle = {
             backgroundColor: 'white',
@@ -2129,6 +2150,21 @@ function ClinicDetail() {
                                 <div style={{fontSize: '0.75rem', color: '#6b7280'}}>{t('appointmentData')}</div>
                                     <div style={{fontSize: '0.95rem', color: '#1f2937', fontWeight: '500'}}>
                                     {t(step1Data.appointmentType)}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style={{ ...infoTileStyle, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                                <line x1="9" y1="9" x2="15" y2="9"/>
+                                <line x1="9" y1="12" x2="15" y2="12"/>
+                                <line x1="9" y1="15" x2="13" y2="15"/>
+                            </svg>
+                            <div style={{flex: 1}}>
+                                <div style={{fontSize: '0.75rem', color: '#6b7280'}}>แผนก</div>
+                                <div style={{fontSize: '0.95rem', color: '#1f2937', fontWeight: '500'}}>
+                                    {displayDepartment}
                                 </div>
                             </div>
                         </div>

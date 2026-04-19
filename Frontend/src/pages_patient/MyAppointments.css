@@ -5,11 +5,11 @@
 }
 
 .appointments-container {
-    max-width: 1220px;
+    max-width: 1080px;
     margin: 0 auto;
-    padding: 20px 18px 42px;
+    padding: 18px 16px 36px;
     display: grid;
-    gap: 22px;
+    gap: 18px;
 }
 
 .appointments-hero {
@@ -18,7 +18,7 @@
     background: linear-gradient(135deg,#1d4ed8 0%,#2563eb 55%,#60a5fa 100%);
     color: white;
     border-radius: 24px;
-    padding: 24px 22px 22px;
+    padding: 20px 20px 18px;
     box-shadow: 0 14px 30px rgba(15, 23, 42, 0.14);
 }
 
@@ -58,7 +58,7 @@
 
 .appointments-hero-content {
     display: grid;
-    gap: 10px;
+    gap: 8px;
     position: relative;
     z-index: 1;
 }
@@ -78,7 +78,7 @@
 
 .appointments-hero-title {
     margin: 0;
-    font-size: clamp(1.45rem, 2.2vw, 1.95rem);
+    font-size: clamp(1.35rem, 2vw, 1.7rem);
     color: white;
     font-weight: 800;
     line-height: 1.18;
@@ -87,16 +87,16 @@
 .appointments-hero-desc {
     margin: 0;
     color: rgba(255,255,255,0.92);
-    font-size: 0.92rem;
+    font-size: 0.9rem;
     line-height: 1.55;
-    max-width: 680px;
+    max-width: 620px;
 }
 
 .hero-stats {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
-    margin-top: 10px;
+    gap: 10px;
+    margin-top: 8px;
 }
 
 .stat-card {
@@ -104,15 +104,15 @@
     border: 1px solid rgba(255,255,255,0.22);
     border-radius: 14px;
     color: white;
-    padding: 12px 14px;
+    padding: 10px 12px;
     display: grid;
     gap: 3px;
-    min-height: 78px;
+    min-height: 70px;
 }
 
 .stat-card strong {
     display: block;
-    font-size: 1.85rem;
+    font-size: 1.65rem;
     font-weight: 800;
     line-height: 1;
 }
@@ -124,7 +124,7 @@
 
 .appointments-main-panel {
     display: grid;
-    gap: 16px;
+    gap: 14px;
     margin-top: 0;
     position: relative;
     z-index: 1;
@@ -134,7 +134,7 @@
 
 .pending-block {
     width: 100%;
-    max-width: 980px;
+    max-width: 100%;
     margin: 0 auto;
 }
 
@@ -144,7 +144,7 @@
     margin: 0 auto;
     background: #ffffff;
     border-radius: 18px;
-    padding: 20px;
+    padding: 16px;
     box-shadow: 0 14px 32px rgba(15, 23, 42, 0.07);
     border: 1px solid rgba(15, 23, 42, 0.08);
     position: relative;
@@ -153,13 +153,13 @@
 }
 
 .appointment-section:not(:first-child) {
-    margin-top: 14px;
+    margin-top: 12px;
 }
 
 .appointment-list-header {
-    font-size: 1.42rem;
+    font-size: 1.2rem;
     color: #0f172a;
-    margin-bottom: 14px;
+    margin-bottom: 10px;
     font-weight: 800;
     letter-spacing: -0.02em;
     position: relative;
@@ -181,8 +181,8 @@
 .appointment-card {
     background: #ffffff;
     border-radius: 14px;
-    padding: 16px 18px;
-    margin-bottom: 12px;
+    padding: 14px 15px;
+    margin-bottom: 10px;
     box-shadow: 0 10px 22px rgba(15, 23, 42, 0.07);
     border: 1px solid rgba(15, 23, 42, 0.08);
     display: grid;
@@ -212,12 +212,12 @@
 
 .card-main {
     display: grid;
-    gap: 6px;
+    gap: 4px;
 }
 
 .card-title {
     margin: 0;
-    font-size: 1.55rem;
+    font-size: 1.15rem;
     font-weight: 700;
     color: #0f172a;
 }
@@ -225,14 +225,51 @@
 .card-main p {
     margin: 0;
     color: #475569;
-    font-size: 1.02rem;
-    line-height: 1.55;
+    font-size: 0.92rem;
+    line-height: 1.45;
 }
 
 .card-main p strong {
     color: #0f172a;
     display: inline-block;
     min-width: 74px;
+}
+
+.requested-slots-block {
+    margin-top: 4px;
+    display: grid;
+    gap: 6px;
+}
+
+.requested-slots-list {
+    display: grid;
+    gap: 6px;
+}
+
+.requested-slot-item {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    background: linear-gradient(135deg, #eff6ff 0%, #f8fbff 100%);
+    border: 1px solid #dbeafe;
+    border-radius: 10px;
+    padding: 6px 10px;
+    color: #1e3a8a;
+}
+
+.requested-slot-index {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    padding: 2px 8px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #1d4ed8;
+    background: #dbeafe;
+    border: 1px solid #bfdbfe;
 }
 
 .card-status {
@@ -245,11 +282,11 @@
     display: inline-flex;
     align-items: center;
     gap: 0.45rem;
-    padding: 0.5rem 0.8rem;
+    padding: 0.45rem 0.72rem;
     border-radius: 999px;
     font-size: 0.8rem;
     font-weight: 700;
-    min-width: 102px;
+    min-width: 94px;
     justify-content: center;
     background: rgba(255,255,255,0.2);
     color: white;
@@ -313,9 +350,61 @@
     margin-bottom: 0.85rem;
 }
 
+#appointment-detail-modal .modal-content {
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    box-shadow: 0 30px 60px rgba(15, 23, 42, 0.2);
+}
+
+#appointment-detail-content {
+    display: grid;
+    gap: 10px;
+}
+
+#appointment-detail-content > h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 800;
+}
+
+#appointment-detail-content hr {
+    border: 0;
+    height: 1px;
+    margin: 2px 0 6px;
+    background: linear-gradient(90deg, rgba(148,163,184,0.2), rgba(148,163,184,0.8), rgba(148,163,184,0.2));
+}
+
+.appointment-detail-title {
+    margin: 0;
+    font-size: 1.02rem;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.appointment-detail-row {
+    margin: 0;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: #334155;
+}
+
+.appointment-detail-row strong {
+    color: #0f172a;
+    min-width: 88px;
+    display: inline-block;
+}
+
+#appointment-detail-modal .requested-slots-block {
+    margin-top: 2px;
+}
+
+#appointment-detail-modal .requested-slot-item {
+    background: #eef4ff;
+}
+
 @media (max-width: 860px) {
     .appointments-container {
-        padding: 16px 14px 34px;
+        padding: 14px 12px 28px;
     }
     .hero-stats {
         grid-template-columns: 1fr;
@@ -336,7 +425,7 @@
 
 @media (max-width: 640px) {
     .appointments-hero {
-        padding: 18px 14px;
+        padding: 16px 12px;
     }
     .appointments-hero-title {
         font-size: 1.25rem;
@@ -358,5 +447,11 @@
     }
     .card-main p {
         font-size: 0.88rem;
+    }
+    .requested-slot-item {
+        font-size: 0.85rem;
+    }
+    .appointment-detail-row strong {
+        min-width: 80px;
     }
 }

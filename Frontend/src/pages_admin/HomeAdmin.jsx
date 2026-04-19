@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import emailjs from '@emailjs/browser';
 import axios from 'axios';
+import { useAuth } from '../contexts/AuthContext';
 // (CSS ถูก import ใน main.jsx แล้ว)
 
 // (Config EmailJS)
@@ -18,6 +19,7 @@ const generateId = () => {
 };
 
 function HomeAdmin() {
+    const { fetchAdminUserList } = useAuth();
     // --- State ---
     const [view, setView] = useState('home'); // 'home', 'new', 'history'
     const [requests, setRequests] = useState([]);
@@ -31,27 +33,57 @@ function HomeAdmin() {
     
     // State สำหรับเลือกรอบนัดหมายที่จะอนุมัติ
     const [selectedAppointmentRounds, setSelectedAppointmentRounds] = useState({});
+    const [searchTerm, setSearchTerm] = useState('');
+    const [onlyMissingDoctor, setOnlyMissingDoctor] = useState(false);
+    const [codeSearchResults, setCodeSearchResults] = useState(null);
+
+    const isOpenRequest = (item) => {
+        const status = String(item?.status || '').toLowerCase();
+        return status === 'new' || status === 'pending';
+    };
 
     // --- Data Loading ---
     useEffect(() => {
-        const storedRequests = JSON.parse(localStorage.getItem('requests')) || [];
-        const storedUsers = JSON.parse(sessionStorage.getItem('users') || localStorage.getItem('users') || '[]');
-        const storedNotifications = JSON.parse(localStorage.getItem('notifications')) || [];
+        const loadData = async () => {
+            const storedRequests = JSON.parse(localStorage.getItem('requests')) || [];
+            const storedUsers = JSON.parse(sessionStorage.getItem('users') || localStorage.getItem('users') || '[]');
+            const storedNotifications = JSON.parse(localStorage.getItem('notifications')) || [];
 
-        // Keep patient list in session storage only; remove old persistent copy.
-        sessionStorage.setItem('users', JSON.stringify(storedUsers));
-        localStorage.removeItem('users');
-        
-        setRequests(storedRequests);
-        setUsers(storedUsers);
-        setNotifications(storedNotifications);
+            setNotifications(storedNotifications);
 
-        try {
-            emailjs.init(EMAILJS_CONFIG.PUBLIC_KEY);
-        } catch (e) {
-            console.error("EmailJS SDK init failed.", e);
-        }
-    }, []);
+            try {
+                emailjs.init(EMAILJS_CONFIG.PUBLIC_KEY);
+            } catch (e) {
+                console.error('EmailJS SDK init failed.', e);
+            }
+
+            try {
+                const [appointmentsRes, usersRes] = await Promise.all([
+                    axios.get('/api/appointments'),
+                    fetchAdminUserList(),
+                ]);
+
+                const apiRequests = Array.isArray(appointmentsRes?.data) ? appointmentsRes.data : [];
+                setRequests(apiRequests);
+                localStorage.setItem('requests', JSON.stringify(apiRequests));
+
+                if (usersRes?.success) {
+                    const apiUsers = Array.isArray(usersRes.users) ? usersRes.users : [];
+                    setUsers(apiUsers);
+                    sessionStorage.setItem('users', JSON.stringify(apiUsers));
+                    localStorage.removeItem('users');
+                } else {
+                    setUsers(storedUsers);
+                }
+            } catch (error) {
+                console.warn('โหลดข้อมูลจาก API ไม่สำเร็จ ใช้ข้อมูลสำรองในเครื่องแทน:', error);
+                setRequests(storedRequests);
+                setUsers(storedUsers);
+            }
+        };
+
+        loadData();
+    }, [fetchAdminUserList]);
 
     // --- Helpers ---
     const saveRequestsData = (updatedRequests) => {
@@ -65,7 +97,7 @@ function HomeAdmin() {
 
     // --- Memoized Data ---
     const newRequests = useMemo(() => 
-        requests.filter(r => r && r.status === 'new')
+        requests.filter(r => r && isOpenRequest(r))
     , [requests]);
 
     // 🔹 [ADDED] ดึงข้อมูลประวัติ (ยืนยันแล้ว / ปฏิเสธแล้ว) 🔹
@@ -73,6 +105,71 @@ function HomeAdmin() {
         requests.filter(r => r && (r.status === 'confirmed' || r.status === 'rejected'))
                 .sort((a, b) => b.id - a.id) // เรียงล่าสุดก่อน
     , [requests]);
+
+    const filteredNewRequests = useMemo(() => {
+        const keyword = searchTerm.trim().toLowerCase();
+        const sourceRequests = codeSearchResults
+            ? codeSearchResults.filter((r) => r && isOpenRequest(r))
+            : newRequests;
+
+        return sourceRequests.filter((r) => {
+            const patientName = String(r?.patient?.name || '').toLowerCase();
+            const patientEmail = String(r?.patient?.email || '').toLowerCase();
+            const patientId = String(r?.patient?.id || '').toLowerCase();
+            const appointmentCode = String(r?.id || '').toLowerCase();
+            const doctorName = String(r?.selectedDoctor || r?.doctor?.name || '').toLowerCase();
+            const symptoms = String(r?.symptoms || '').toLowerCase();
+
+            const matchKeyword = !keyword ||
+                patientName.includes(keyword) ||
+                patientEmail.includes(keyword) ||
+                patientId.includes(keyword) ||
+                appointmentCode.includes(keyword) ||
+                doctorName.includes(keyword) ||
+                symptoms.includes(keyword);
+
+            const isMissingDoctor = !String(r?.selectedDoctor || r?.doctor?.name || '').trim();
+            const matchDoctorFilter = !onlyMissingDoctor || isMissingDoctor;
+
+            return matchKeyword && matchDoctorFilter;
+        });
+    }, [newRequests, codeSearchResults, searchTerm, onlyMissingDoctor]);
+
+    useEffect(() => {
+        const raw = searchTerm.trim();
+        const isCodeSearch = /^\d{3,}$/.test(raw);
+
+        if (!raw || !isCodeSearch) {
+            setCodeSearchResults(null);
+            return;
+        }
+
+        const timer = setTimeout(async () => {
+            try {
+                const res = await axios.get('/api/appointments/search-by-code', {
+                    params: { code: raw },
+                });
+                const apiResults = Array.isArray(res.data) ? res.data : [];
+                if (apiResults.length > 0) {
+                    setCodeSearchResults(apiResults);
+                    return;
+                }
+
+                const localResults = requests.filter((r) =>
+                    String(r?.id || '').toLowerCase().includes(raw.toLowerCase())
+                );
+                setCodeSearchResults(localResults);
+            } catch (error) {
+                console.warn('ค้นหารหัสนัดหมายผ่าน API ไม่สำเร็จ:', error);
+                const localResults = requests.filter((r) =>
+                    String(r?.id || '').toLowerCase().includes(raw.toLowerCase())
+                );
+                setCodeSearchResults(localResults);
+            }
+        }, 250);
+
+        return () => clearTimeout(timer);
+    }, [searchTerm, requests]);
 
     // --- Badge Update ---
     useEffect(() => {
@@ -301,7 +398,7 @@ function HomeAdmin() {
     // แสดงรายการนัดหมายใหม่โดยตรง
     return (
         <div id="page-home-new" className="page active" style={{ background: 'linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%)', minHeight: '100vh' }}>
-            <main className="container" style={{ maxWidth: '900px', margin: '0 auto', padding: '2rem 1.5rem' }}>
+            <main className="container" style={{ maxWidth: '1320px', margin: '0 auto', padding: '1.2rem 0.9rem' }}>
                 {/* Page Header */}
                 <div style={{ 
                     display: 'flex', 
@@ -333,6 +430,85 @@ function HomeAdmin() {
                     </div>
                 </div>
 
+                <div style={{
+                    background: 'white',
+                    border: '1px solid #dbeafe',
+                    borderRadius: '14px',
+                    padding: '0.75rem',
+                    marginBottom: '1rem',
+                    display: 'flex',
+                    gap: '0.75rem',
+                    flexWrap: 'wrap',
+                    alignItems: 'center'
+                }}>
+                    <div style={{ flex: '1 1 560px', minWidth: '280px', maxWidth: '100%' }}>
+                        <input
+                            type="text"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            placeholder="ค้นหาจากชื่อคนไข้, อีเมล, แพทย์, อาการ..."
+                            style={{
+                                width: '100%',
+                                border: '1px solid #cbd5e1',
+                                borderRadius: '10px',
+                                padding: '0.65rem 0.85rem',
+                                fontSize: '0.92rem',
+                                outline: 'none',
+                                boxSizing: 'border-box'
+                            }}
+                        />
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                        <label style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            fontSize: '0.88rem',
+                            color: '#334155',
+                            fontWeight: 600,
+                            whiteSpace: 'nowrap',
+                            flexShrink: 0,
+                            border: '1px solid #dbeafe',
+                            background: '#f8fbff',
+                            borderRadius: '10px',
+                            padding: '0.55rem 0.7rem',
+                            lineHeight: 1
+                        }}>
+                            <input
+                                type="checkbox"
+                                checked={onlyMissingDoctor}
+                                onChange={(e) => setOnlyMissingDoctor(e.target.checked)}
+                                style={{ width: '16px', height: '16px', accentColor: '#2563eb', margin: 0 }}
+                            />
+                            เฉพาะเคสที่ยังไม่ได้เลือกแพทย์
+                        </label>
+
+                        {(searchTerm || onlyMissingDoctor) && (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setSearchTerm('');
+                                    setOnlyMissingDoctor(false);
+                                }}
+                                style={{
+                                    border: '1px solid #bfdbfe',
+                                    background: '#eff6ff',
+                                    color: '#1d4ed8',
+                                    borderRadius: '10px',
+                                    padding: '0.55rem 0.85rem',
+                                    fontSize: '0.85rem',
+                                    fontWeight: 700,
+                                    cursor: 'pointer',
+                                    flexShrink: 0
+                                }}
+                            >
+                                ล้างตัวกรอง
+                            </button>
+                        )}
+                    </div>
+                </div>
+
                 <div id="new-requests-list">
                     {newRequests.length === 0 ? (
                         <div style={{
@@ -357,8 +533,20 @@ function HomeAdmin() {
                             <p style={{ color: '#64748b', fontSize: '1.1rem', margin: 0 }}>ไม่มีรายการนัดหมายใหม่</p>
                             <p style={{ color: '#94a3b8', fontSize: '0.9rem', margin: '0.5rem 0 0 0' }}>รายการนัดหมายใหม่จะปรากฏที่นี่</p>
                         </div>
+                    ) : filteredNewRequests.length === 0 ? (
+                        <div style={{
+                            textAlign: 'center',
+                            padding: '2.2rem 1.2rem',
+                            background: 'white',
+                            borderRadius: '16px',
+                            border: '1px dashed #cbd5e1',
+                            color: '#64748b'
+                        }}>
+                            <p style={{ margin: 0, fontWeight: 700 }}>ไม่พบรายการที่ตรงกับตัวกรอง</p>
+                            <p style={{ margin: '0.4rem 0 0', fontSize: '0.9rem' }}>ลองล้างตัวกรองหรือปรับคำค้นหาใหม่</p>
+                        </div>
                     ) : (
-                        newRequests.map(r => {
+                        filteredNewRequests.map(r => {
                             const patient = users.find(u => u.id === r.patient?.id);
                                 const patientEmail = r.patient?.email || patient?.email || 'ไม่ระบุ';
                                 
@@ -423,6 +611,13 @@ function HomeAdmin() {
                                                         <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 500 }}>คนไข้:</span>
                                                         <span style={{ fontSize: '1.1rem', fontWeight: 700, color: '#1e293b' }}>
                                                             {r.patient?.name || 'N/A'}
+                                                        </span>
+                                                        <span style={{
+                                                            background: '#dbeafe', color: '#1d4ed8',
+                                                            padding: '0.2rem 0.6rem', borderRadius: '6px',
+                                                            fontSize: '0.75rem', fontWeight: 700
+                                                        }}>
+                                                            รหัสนัด: {r.id || '-'}
                                                         </span>
                                                         <span style={{
                                                             background: '#e0e7ff', color: '#4338ca',

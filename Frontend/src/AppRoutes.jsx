@@ -18,7 +18,6 @@ import Appointments from './pages_admin/Appointments.jsx';
 import ProfileAdmin from './pages_admin/Profileadmin.jsx';
 import AdminChat from './chat/adminchat.jsx';
 import AppointmentHistory from './pages_admin/AppointmentHistory.jsx';
-import UsersAdmin from './pages_admin/UsersAdmin.jsx';
 
 export default function AppRoutes() {
   return (
@@ -46,7 +45,6 @@ export default function AppRoutes() {
           <Route path="home" element={<HomeAdmin />} />
           <Route path="history" element={<AppointmentHistory />} />
           <Route path="clinics" element={<Clinics />} />
-          <Route path="users" element={<UsersAdmin />} />
           <Route path="appointments" element={<Appointments />} /> 
           <Route path="profile" element={<ProfileAdmin />} />
           <Route path="chat" element={<AdminChat />} />

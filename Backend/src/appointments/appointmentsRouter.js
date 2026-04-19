@@ -98,6 +98,31 @@ function mapAppointmentRow(row) {
 export function createAppointmentsRouter({ dbAll, dbGet, dbRun, dbInsert }) {
   const router = Router();
 
+  router.get('/search-by-code', async (req, res) => {
+    try {
+      const code = String(req.query.code || '').trim();
+      if (!code) {
+        return res.status(400).json({ error: 'code query is required' });
+      }
+
+      const rows = await dbAll(
+        `SELECT *
+         FROM appointments
+         WHERE source_request_id = ?
+            OR source_request_id LIKE ?
+            OR id::text = ?
+         ORDER BY created_at DESC, id DESC
+         LIMIT 100`,
+        [code, `%${code}%`, code]
+      );
+
+      return res.json(rows.map(mapAppointmentRow));
+    } catch (error) {
+      console.error('GET /api/appointments/search-by-code error:', error);
+      return res.status(500).json({ error: 'Unable to search appointments by code' });
+    }
+  });
+
   router.get('/', async (req, res) => {
     try {
       const { userId } = req.query;

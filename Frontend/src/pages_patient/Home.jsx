@@ -184,6 +184,16 @@ function Home() {
     };
 
     const handleSelectClinic = (id) => {
+        if (!isAuthenticated) {
+            localStorage.setItem('selectedClinicId', id);
+            navigate('/login', {
+                state: {
+                    from: { pathname: '/patient/clinic-detail' },
+                },
+            });
+            return;
+        }
+
         localStorage.setItem('selectedClinicId', id);
         navigate('/patient/clinic-detail'); 
     };

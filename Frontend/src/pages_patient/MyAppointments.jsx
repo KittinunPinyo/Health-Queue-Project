@@ -2,12 +2,49 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import './MyAppointments.css';
 
+const normalizeSelectableText = (value, fallback = 'ไม่ได้เลือก') => {
+    const text = String(value || '').trim();
+    if (!text || text === '-' || text === 'ไม่ระบุ' || text.toLowerCase() === 'n/a') {
+        return fallback;
+    }
+    return text;
+};
+
+const getRequestedTimeSlots = (appointment) => {
+    const sourceSlots = Array.isArray(appointment?.appointments)
+        ? appointment.appointments.slice(0, 3)
+        : [];
+
+    if (sourceSlots.length > 0) {
+        return sourceSlots.map((apt) => ({
+            date: apt?.date || '-',
+            time: apt?.time || '-'
+        }));
+    }
+
+    const fallbackFirst = {
+        date: appointment?.date || '-',
+        time: appointment?.time || '-'
+    };
+
+    return [
+        fallbackFirst,
+        { date: '-', time: '-' },
+        { date: '-', time: '-' }
+    ];
+};
+
 // (Component: Modal รายละเอียด)
 function AppointmentDetailModal({ appointment, user, isOpen, onClose }) {
     const { t } = useLanguage();
     if (!isOpen || !appointment || !user) return null;
 
     const a = appointment; 
+    const notSelected = 'ไม่ได้เลือก';
+    const department = normalizeSelectableText(a.selectedSpecialtyDetail || a.selectedSpecialty || a.doctor?.specialty, notSelected);
+    const doctorName = normalizeSelectableText(a.selectedDoctor || a.doctor?.name, notSelected);
+    const requestedSlots = getRequestedTimeSlots(a);
+    const isPending = a.status === 'new' || a.status === 'approved';
 
     let statusHtml = '';
     if (a.status === 'confirmed') {
@@ -35,11 +72,27 @@ function AppointmentDetailModal({ appointment, user, isOpen, onClose }) {
                 <div id="appointment-detail-content">
                     {statusHtml}
                     <hr />
-                    <h4>{t('appointmentInfo')}</h4>
-                    <p><strong>{t('doctor')}:</strong> {a.selectedDoctor || a.doctor?.name || '-'}</p>
-                    <p><strong>{t('clinic')}:</strong> {a.clinic?.name || '-'}</p>
-                    <p><strong>{t('dateTime')}:</strong> {a.date || '-'} {t('time')} {a.time || '-'}</p>
-                    <p><strong>{t('adminReason')}:</strong> {a.rejectionReason || '-'}</p>
+                    <h4 className="appointment-detail-title">{t('appointmentInfo')}</h4>
+                    <p className="appointment-detail-row"><strong>รหัสนัดหมาย:</strong> {a.id || '-'}</p>
+                    <p className="appointment-detail-row"><strong>{t('doctor')}:</strong> {doctorName}</p>
+                    <p className="appointment-detail-row"><strong>แผนก:</strong> {department}</p>
+                    <p className="appointment-detail-row"><strong>{t('clinic')}:</strong> {a.clinic?.name || '-'}</p>
+                    {isPending ? (
+                        <div className="requested-slots-block">
+                            <strong>เวลาจอง:</strong>
+                            <div className="requested-slots-list">
+                                {requestedSlots.map((slot, index) => (
+                                    <p key={`${slot.date}-${slot.time}-${index}`} className="requested-slot-item">
+                                        <span className="requested-slot-index">ช่วงที่ {index + 1}</span>
+                                        <span>{slot.date} {t('time')} {slot.time}</span>
+                                    </p>
+                                ))}
+                            </div>
+                        </div>
+                    ) : (
+                        <p className="appointment-detail-row"><strong>{t('dateTime')}:</strong> {a.date || '-'} {t('time')} {a.time || '-'}</p>
+                    )}
+                    <p className="appointment-detail-row"><strong>{t('adminReason')}:</strong> {a.rejectionReason || '-'}</p>
                 </div>
             </div>
         </div>
@@ -121,6 +174,11 @@ function MyAppointments() {
         let statusText = '';
         let statusIcon = null;
         let cardClass = '';
+        const notSelected = 'ไม่ได้เลือก';
+        const department = normalizeSelectableText(a.selectedSpecialtyDetail || a.selectedSpecialty || a.doctor?.specialty, notSelected);
+        const doctorName = normalizeSelectableText(a.selectedDoctor || a.doctor?.name, notSelected);
+        const requestedSlots = getRequestedTimeSlots(a);
+        const isPending = a.status === 'new' || a.status === 'approved';
 
         switch(a.status) {
             case 'confirmed':
@@ -148,9 +206,25 @@ function MyAppointments() {
                 style={{cursor: 'pointer'}}
             >
                 <div className="card-main">
-                    <h3 className="card-title">{a.selectedDoctor || a.doctor?.name || '-'}</h3>
+                    <h3 className="card-title">{doctorName}</h3>
+                    <p><strong>รหัสนัดหมาย:</strong> {a.id || '-'}</p>
                     <p><strong>{t('clinic')}:</strong> {a.clinic?.name || '-'}</p>
-                    <p><strong>{t('dateTime')}:</strong> {a.date} {t('time')} {a.time}</p>
+                    <p><strong>แผนก:</strong> {department}</p>
+                    {isPending ? (
+                        <div className="requested-slots-block">
+                            <strong>เวลาจอง:</strong>
+                            <div className="requested-slots-list">
+                                {requestedSlots.map((slot, index) => (
+                                    <p key={`${slot.date}-${slot.time}-${index}`} className="requested-slot-item">
+                                        <span className="requested-slot-index">ช่วงที่ {index + 1}</span>
+                                        <span>{slot.date} {t('time')} {slot.time}</span>
+                                    </p>
+                                ))}
+                            </div>
+                        </div>
+                    ) : (
+                        <p><strong>{t('dateTime')}:</strong> {a.date} {t('time')} {a.time}</p>
+                    )}
                     {a.status === 'rejected' && (
                         <p><strong>{t('reason')}:</strong> {a.rejectionReason?.substring(0, 50) || '-'}...</p>
                     )}

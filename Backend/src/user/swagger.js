@@ -1437,6 +1437,42 @@ export const openApiDocument = {
         },
       },
     },
+    '/api/appointments/search-by-code': {
+      get: {
+        tags: ['Appointments'],
+        summary: 'ค้นหานัดหมายด้วยรหัสนัดหมาย',
+        parameters: [
+          {
+            name: 'code',
+            in: 'query',
+            required: true,
+            schema: { type: 'string' },
+            description: 'รหัสนัดหมาย (source_request_id) หรือบางส่วนของรหัส',
+          },
+        ],
+        responses: {
+          200: {
+            description: 'ผลการค้นหานัดหมายตามรหัส',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'array',
+                  items: { $ref: '#/components/schemas/Appointment' },
+                },
+              },
+            },
+          },
+          400: {
+            description: 'ไม่ได้ส่ง code query',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+              },
+            },
+          },
+        },
+      },
+    },
     '/api/appointments/{id}/status': {
       patch: {
         tags: ['Appointments'],

@@ -1,13 +1,18 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
+import './UsersAdmin.css';
 
 function UsersAdmin() {
+  const { t } = useLanguage();
   const { user: currentUser, fetchAdminUserList, updateUserRole } = useAuth();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [busyIds, setBusyIds] = useState({});
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [conditionFilter, setConditionFilter] = useState('');
 
   useEffect(() => {
     const loadUsers = async () => {
@@ -55,120 +60,198 @@ function UsersAdmin() {
     const normalized = (role || '').toLowerCase();
     if (normalized === 'admin') {
       return (
-        <span style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '6px 12px',
-          borderRadius: '999px',
-          background: 'rgba(79, 70, 229, 0.15)',
-          color: '#4338ca',
-          fontWeight: 600,
-          fontSize: '0.9rem',
-        }}>
+        <span className="users-role users-role-admin">
           แอดมิน
         </span>
       );
     }
 
     return (
-      <span style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '6px 12px',
-        borderRadius: '999px',
-        background: 'rgba(16, 185, 129, 0.15)',
-        color: '#047857',
-        fontWeight: 600,
-        fontSize: '0.9rem',
-      }}>
+      <span className="users-role users-role-patient">
         ผู้ใช้
       </span>
     );
   };
 
-  return (
-    <div style={{ minHeight: '100vh', padding: '24px', background: '#f8fafc' }}>
-      <div style={{
-        marginBottom: '24px',
-        padding: '26px 28px',
-        borderRadius: '22px',
-        background: 'linear-gradient(135deg, #4338ca, #6366f1)',
-        color: 'white',
-        boxShadow: '0 18px 40px rgba(67, 56, 202, 0.18)'
-      }}>
-        <p style={{ margin: 0, opacity: 0.85, letterSpacing: '0.04em' }}>แดชบอร์ดผู้ดูแลระบบ</p>
-        <h1 style={{ margin: '12px 0 8px', fontSize: '2rem' }}>จัดการบัญชีผู้ใช้</h1>
-        <p style={{ margin: 0, maxWidth: '740px', color: 'rgba(255,255,255,0.9)' }}>
-          ดูรายชื่อผู้ใช้ทั้งหมดในระบบและเปลี่ยนบทบาทผู้ใช้งานเป็นผู้ดูแลระบบหรือผู้ใช้ทั่วไปได้ทันที
-        </p>
+  const normalizedUsers = useMemo(
+    () => users.map((u) => ({
+      ...u,
+      role: String(u?.role || 'patient').toLowerCase(),
+      gender: String(u?.gender || '').toLowerCase(),
+      age: u?.age ?? '-',
+      conditions: String(u?.medical_conditions || u?.medicalConditions || '').trim(),
+    })),
+    [users]
+  );
+
+  const stats = useMemo(() => {
+    return normalizedUsers.reduce((acc, user) => {
+      acc.total += 1;
+      if (user.gender === 'male' || user.gender === 'ชาย') acc.male += 1;
+      if (user.gender === 'female' || user.gender === 'หญิง') acc.female += 1;
+      if (user.conditions && user.conditions !== '-') acc.chronic += 1;
+      return acc;
+    }, { total: 0, male: 0, female: 0, chronic: 0 });
+  }, [normalizedUsers]);
+
+  const filteredUsers = useMemo(() => {
+    const search = searchTerm.trim().toLowerCase();
+    const condition = conditionFilter.trim().toLowerCase();
+
+    return normalizedUsers.filter((user) => {
+      const searchable = [
+        String(user?.name || ''),
+        String(user?.email || ''),
+        String(user?.idCard || user?.id_card || ''),
+      ].join(' ').toLowerCase();
+
+      const userConditions = String(user?.conditions || '').toLowerCase();
+      const matchesSearch = !search || searchable.includes(search);
+      const matchesCondition = !condition || userConditions.includes(condition);
+      return matchesSearch && matchesCondition;
+    });
+  }, [normalizedUsers, searchTerm, conditionFilter]);
+
+  const renderHealthInfo = (user) => {
+    const genderValue = user?.gender === 'male' || user?.gender === 'ชาย'
+      ? 'ชาย'
+      : user?.gender === 'female' || user?.gender === 'หญิง'
+      ? 'หญิง'
+      : 'ไม่ระบุ';
+    const chronic = user?.conditions || '-';
+
+    return (
+      <div className="users-health-info">
+        <div>
+          <span>อายุ:</span> {user?.age || '-'}
+        </div>
+        <div>
+          <span>เพศ:</span> {genderValue}
+        </div>
+        <div>
+          <span>โรคประจำตัว:</span> {chronic}
+        </div>
       </div>
+    );
+  };
+
+  return (
+    <div className="users-admin-page">
+      <div className="users-admin-shell">
+        <section className="users-admin-header">
+          <div className="users-admin-header-orb users-admin-header-orb-right" />
+          <div className="users-admin-header-orb users-admin-header-orb-left" />
+          <div className="users-admin-header-icon">👥</div>
+          <div className="users-admin-header-content">
+            <h1>จัดการข้อมูลคนไข้</h1>
+            <p>ดูแลและจัดการรายชื่อผู้ใช้ทั้งหมดในระบบ</p>
+          </div>
+        </section>
+
+        <section className="users-admin-stats-grid">
+          <article className="users-stat-card users-stat-total">
+            <strong>{stats.total}</strong>
+            <span>คนไข้ทั้งหมด</span>
+            <i>👥</i>
+          </article>
+          <article className="users-stat-card users-stat-male">
+            <strong>{stats.male}</strong>
+            <span>เพศชาย</span>
+            <i>ⓘ</i>
+          </article>
+          <article className="users-stat-card users-stat-female">
+            <strong>{stats.female}</strong>
+            <span>เพศหญิง</span>
+            <i>ⓘ</i>
+          </article>
+          <article className="users-stat-card users-stat-chronic">
+            <strong>{stats.chronic}</strong>
+            <span>มีโรคประจำตัว</span>
+            <i>∿</i>
+          </article>
+        </section>
+
+        <section className="users-admin-toolbar">
+          <div className="users-input-wrap">
+            <span className="users-input-icon">⌕</span>
+            <input
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="ค้นหาชื่อคนไข้, อีเมล หรือเลขบัตร..."
+            />
+          </div>
+          <div className="users-input-wrap">
+            <input
+              value={conditionFilter}
+              onChange={(e) => setConditionFilter(e.target.value)}
+              placeholder="กรองโรคประจำตัว เช่น เบาหวาน"
+            />
+          </div>
+        </section>
 
       {error && (
-        <div style={{ marginBottom: '20px', padding: '16px 20px', borderRadius: '18px', background: '#fee2e2', color: '#991b1b' }}>
+        <div className="users-alert users-alert-error">
           {error}
         </div>
       )}
       {message && (
-        <div style={{ marginBottom: '20px', padding: '16px 20px', borderRadius: '18px', background: '#d1fae5', color: '#065f46' }}>
+        <div className="users-alert users-alert-success">
           {message}
         </div>
       )}
 
-      <div style={{ overflowX: 'auto', borderRadius: '24px', background: 'white', boxShadow: '0 12px 30px rgba(15, 23, 42, 0.08)' }}>
-        <table style={{ width: '100%', minWidth: '760px', borderCollapse: 'collapse', fontFamily: 'Inter, sans-serif' }}>
+      <section className="users-table-panel">
+        <div className="users-table-scroll">
+        <table className="users-table">
           <thead>
             <tr>
-              <th style={{ textAlign: 'left', padding: '20px 18px', color: '#475569', fontSize: '0.95rem', fontWeight: 700 }}>ชื่อ-นามสกุล</th>
-              <th style={{ textAlign: 'left', padding: '20px 18px', color: '#475569', fontSize: '0.95rem', fontWeight: 700 }}>อีเมล</th>
-              <th style={{ textAlign: 'left', padding: '20px 18px', color: '#475569', fontSize: '0.95rem', fontWeight: 700 }}>หมายเลขประจำตัว</th>
-              <th style={{ textAlign: 'center', padding: '20px 18px', color: '#475569', fontSize: '0.95rem', fontWeight: 700 }}>บทบาท</th>
-              <th style={{ textAlign: 'center', padding: '20px 18px', color: '#475569', fontSize: '0.95rem', fontWeight: 700 }}>จัดการ</th>
+              <th>ชื่อ - นามสกุล</th>
+              <th>ข้อมูลติดต่อ</th>
+              <th>ข้อมูลสุขภาพ (เบื้องต้น)</th>
+              <th className="text-center">บทบาท</th>
+              <th className="text-center">จัดการ</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan="5" style={{ padding: '40px 18px', textAlign: 'center', color: '#64748b' }}>
+                <td colSpan="5" className="users-empty-row">
                   กำลังโหลดข้อมูลผู้ใช้...
                 </td>
               </tr>
-            ) : users.length === 0 ? (
+            ) : filteredUsers.length === 0 ? (
               <tr>
-                <td colSpan="5" style={{ padding: '40px 18px', textAlign: 'center', color: '#64748b' }}>
-                  ไม่พบข้อมูลผู้ใช้ในระบบ
+                <td colSpan="5" className="users-empty-row">
+                  ไม่พบข้อมูลผู้ใช้ตามตัวกรองที่เลือก
                 </td>
               </tr>
-            ) : users.map((u) => {
+            ) : filteredUsers.map((u) => {
               const isCurrent = u.id === currentUser?.id;
               const currentRole = (u.role || 'patient').toLowerCase();
               const buttonLabel = currentRole === 'admin' ? 'ลดเป็นผู้ใช้' : 'ตั้งเป็นแอดมิน';
               const disabled = busyIds[u.id] || (isCurrent && currentRole === 'admin' && false);
 
               return (
-                <tr key={u.id} style={{ borderTop: '1px solid #eff2f7' }}>
-                  <td style={{ padding: '18px', verticalAlign: 'middle', color: '#0f172a' }}>
-                    <div style={{ fontWeight: 600 }}>{u.name || '-'}</div>
-                    <div style={{ marginTop: '4px', color: '#64748b', fontSize: '0.9rem' }}>{u.username || ''}</div>
+                <tr key={u.id}>
+                  <td>
+                    <div className="users-name-cell">
+                      <span className="users-avatar">{String(u.name || '?').trim().charAt(0).toUpperCase() || '?'}</span>
+                      <div>
+                        <div className="users-name">{u.name || '-'}</div>
+                        <div className="users-sub">{u.idCard || u.id_card || '-'}</div>
+                      </div>
+                    </div>
                   </td>
-                  <td style={{ padding: '18px', verticalAlign: 'middle', color: '#0f172a' }}>{u.email || '-'}</td>
-                  <td style={{ padding: '18px', verticalAlign: 'middle', color: '#0f172a' }}>{u.idCard || u.id_card || '-'}</td>
-                  <td style={{ padding: '18px', verticalAlign: 'middle', textAlign: 'center' }}>{renderRoleLabel(currentRole)}</td>
-                  <td style={{ padding: '18px', verticalAlign: 'middle', textAlign: 'center' }}>
+                  <td>
+                    <div className="users-contact-cell">{u.email || '-'}</div>
+                  </td>
+                  <td>{renderHealthInfo(u)}</td>
+                  <td className="text-center">{renderRoleLabel(currentRole)}</td>
+                  <td className="text-center">
                     <button
                       onClick={() => handleChangeRole(u.id, currentRole)}
                       disabled={disabled}
-                      style={{
-                        padding: '10px 16px',
-                        borderRadius: '12px',
-                        border: 'none',
-                        fontWeight: 600,
-                        cursor: disabled ? 'not-allowed' : 'pointer',
-                        color: '#ffffff',
-                        background: currentRole === 'admin' ? '#ef4444' : '#2563eb',
-                        opacity: disabled ? 0.6 : 1,
-                      }}
+                      className={`users-action-btn ${currentRole === 'admin' ? 'danger' : 'primary'}`}
                     >
                       {busyIds[u.id] ? 'กำลังอัปเดต...' : buttonLabel}
                     </button>
@@ -178,6 +261,8 @@ function UsersAdmin() {
             })}
           </tbody>
         </table>
+        </div>
+      </section>
       </div>
     </div>
   );
