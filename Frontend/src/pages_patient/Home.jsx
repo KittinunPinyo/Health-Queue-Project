@@ -73,7 +73,7 @@ function Home() {
             try {
                 const [hospitalsRes, doctorsRes] = await Promise.all([
                     axios.get('/api/hospitals'),
-                    axios.get('/api/doctors'),
+                    axios.get('/api/doctors?sort=popular'),
                 ]);
                 const hospitals = hospitalsRes.data.hospitals || [];
                 const doctors = doctorsRes.data.doctors || [];

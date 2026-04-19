@@ -170,6 +170,7 @@ export const openApiDocument = {
           hospitalId: { type: 'integer', nullable: true, example: 1 },
           hospital: { type: 'string', example: 'Health Queue Hospital' },
           image: { type: 'string', example: 'https://hospital.test/doctor.png' },
+          appointmentCount: { type: 'integer', example: 25 },
           createdAt: { type: 'string', format: 'date-time' },
           updatedAt: { type: 'string', format: 'date-time' },
         },
@@ -1185,7 +1186,7 @@ export const openApiDocument = {
         },
       },
     },
-    '/api/users/{id}/favorites': {
+    '/api/user/{id}/favorites': {
       get: {
         tags: ['Users'],
         summary: 'ดึงรายชื่อโปรดของผู้ใช้',
@@ -1229,6 +1230,13 @@ export const openApiDocument = {
             required: false,
             schema: { type: 'integer' },
           },
+          {
+            name: 'sort',
+            in: 'query',
+            required: false,
+            schema: { type: 'string', enum: ['popular'] },
+            description: 'เรียงแพทย์ตามจำนวนการนัดหมายมากสุดก่อน',
+          },
         ],
         responses: {
           200: {
@@ -1263,6 +1271,100 @@ export const openApiDocument = {
         responses: {
           201: {
             description: 'สร้างข้อมูลแพทย์สำเร็จ',
+          },
+        },
+      },
+    },
+    '/api/doctors/search': {
+      get: {
+        tags: ['Doctors'],
+        summary: 'ค้นหาแพทย์จากชื่อ ความชำนาญ หรือโรงพยาบาล',
+        parameters: [
+          {
+            name: 'q',
+            in: 'query',
+            required: true,
+            schema: { type: 'string' },
+            description: 'ข้อความค้นหา เช่น ชื่อแพทย์ หรือสาขา',
+          },
+          {
+            name: 'hospitalId',
+            in: 'query',
+            required: false,
+            schema: { type: 'integer' },
+            description: 'กรองเฉพาะแพทย์ของโรงพยาบาลนั้น',
+          },
+        ],
+        responses: {
+          200: {
+            description: 'ผลการค้นหาแพทย์',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    doctors: {
+                      type: 'array',
+                      items: { $ref: '#/components/schemas/Doctor' },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          400: {
+            description: 'q query parameter is required',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/doctors/popular': {
+      get: {
+        tags: ['Doctors'],
+        summary: 'ดึงแพทย์ที่ถูกนัดหมายมากที่สุด',
+        parameters: [
+          {
+            name: 'limit',
+            in: 'query',
+            required: false,
+            schema: { type: 'integer', default: 10, minimum: 1, maximum: 50 },
+            description: 'จำนวนแพทย์สูงสุดที่ต้องการ',
+          },
+          {
+            name: 'hospitalId',
+            in: 'query',
+            required: false,
+            schema: { type: 'integer' },
+          },
+          {
+            name: 'specialty',
+            in: 'query',
+            required: false,
+            schema: { type: 'string' },
+            description: 'กรองเฉพาะแพทย์ตามความชำนาญ',
+          },
+        ],
+        responses: {
+          200: {
+            description: 'รายการแพทย์ยอดนิยม',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    doctors: {
+                      type: 'array',
+                      items: { $ref: '#/components/schemas/Doctor' },
+                    },
+                  },
+                },
+              },
+            },
           },
         },
       },

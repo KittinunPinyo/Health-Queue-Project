@@ -24,6 +24,7 @@ function mapDoctorRow(row) {
     hospitalId: row.hospital_id ?? null,
     hospital: row.hospital || row.hospital_name || '',
     image: row.image || '',
+    appointmentCount: Number(row.appointment_count || 0),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -59,9 +60,14 @@ export function createDoctorsRouter({ dbGet, dbAll, dbRun, dbInsert }) {
 
   router.get('/', async (req, res) => {
     try {
-      const { hospitalId } = req.query;
+      const { hospitalId, sort } = req.query;
       let query = `
-        SELECT d.*, h.name AS hospital_name
+        SELECT d.*, h.name AS hospital_name,
+          COALESCE((
+            SELECT COUNT(1)
+            FROM appointments a
+            WHERE a.selected_doctor = d.name OR a.doctor_name = d.name
+          ), 0) AS appointment_count
         FROM doctors d
         LEFT JOIN hospitals h ON h.id = d.hospital_id
       `;
@@ -72,7 +78,11 @@ export function createDoctorsRouter({ dbGet, dbAll, dbRun, dbInsert }) {
         params.push(hospitalId);
       }
 
-      query += ' ORDER BY d.id ASC';
+      if (String(sort).toLowerCase() === 'popular') {
+        query += ' ORDER BY appointment_count DESC, d.id ASC';
+      } else {
+        query += ' ORDER BY d.id ASC';
+      }
 
       const rows = await dbAll(query, params);
       const doctors = rows.map(mapDoctorRow);
@@ -80,6 +90,90 @@ export function createDoctorsRouter({ dbGet, dbAll, dbRun, dbInsert }) {
     } catch (err) {
       console.error('GET /api/doctors error:', err);
       return res.status(500).json({ error: 'Unable to fetch doctors' });
+    }
+  });
+
+  router.get('/search', async (req, res) => {
+    try {
+      const q = String(req.query.q || '').trim();
+      const hospitalId = req.query.hospitalId;
+
+      if (!q) {
+        return res.status(400).json({ error: 'q query parameter is required' });
+      }
+
+      const searchTerm = q.replace(/[%_]/g, '\\$&');
+      let query = `
+        SELECT d.*, h.name AS hospital_name,
+          COALESCE((
+            SELECT COUNT(1)
+            FROM appointments a
+            WHERE a.selected_doctor = d.name OR a.doctor_name = d.name
+          ), 0) AS appointment_count
+        FROM doctors d
+        LEFT JOIN hospitals h ON h.id = d.hospital_id
+        WHERE (
+          d.name ILIKE ? OR
+          d.specialty ILIKE ? OR
+          d.hospital ILIKE ? OR
+          h.name ILIKE ?
+        )
+      `;
+      const params = Array(4).fill(`%${searchTerm}%`);
+
+      if (hospitalId) {
+        query += ' AND d.hospital_id = ?';
+        params.push(hospitalId);
+      }
+
+      query += ' ORDER BY d.id ASC';
+      const rows = await dbAll(query, params);
+      const doctors = rows.map(mapDoctorRow);
+      return res.json({ doctors });
+    } catch (err) {
+      console.error('GET /api/doctors/search error:', err);
+      return res.status(500).json({ error: 'Unable to search doctors' });
+    }
+  });
+
+  router.get('/popular', async (req, res) => {
+    try {
+      const hospitalId = req.query.hospitalId;
+      const specialty = String(req.query.specialty || '').trim();
+      const limit = Math.min(Math.max(Number(req.query.limit) || 10, 1), 50);
+
+      let query = `
+        SELECT d.*, h.name AS hospital_name,
+          COALESCE((
+            SELECT COUNT(1)
+            FROM appointments a
+            WHERE a.selected_doctor = d.name OR a.doctor_name = d.name
+          ), 0) AS appointment_count
+        FROM doctors d
+        LEFT JOIN hospitals h ON h.id = d.hospital_id
+        WHERE 1 = 1
+      `;
+      const params = [];
+
+      if (hospitalId) {
+        query += ' AND d.hospital_id = ?';
+        params.push(hospitalId);
+      }
+
+      if (specialty) {
+        query += ' AND d.specialty ILIKE ?';
+        params.push(`%${specialty}%`);
+      }
+
+      query += ' ORDER BY appointment_count DESC, d.id ASC LIMIT ?';
+      params.push(limit);
+
+      const rows = await dbAll(query, params);
+      const doctors = rows.map(mapDoctorRow);
+      return res.json({ doctors });
+    } catch (err) {
+      console.error('GET /api/doctors/popular error:', err);
+      return res.status(500).json({ error: 'Unable to fetch popular doctors' });
     }
   });
 
