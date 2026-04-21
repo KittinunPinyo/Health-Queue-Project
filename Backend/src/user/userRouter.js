@@ -70,7 +70,7 @@ function createAuthorizeAdmin() {
 
 const getAllUsers = async (dbAll) => {
   return dbAll(
-    `SELECT id, name, email, phone, role, id_card, date_of_birth, age, gender, height, weight, medical_conditions, allergies
+    `SELECT id, name, email, phone, role, id_card, date_of_birth, gender, height, weight, medical_conditions, allergies
      FROM users
      ORDER BY id ASC`
   );
@@ -87,7 +87,6 @@ export function createAuthRouter({ dbGet, dbInsert, jwtSecret }) {
       phone,
       idCard,
       dateOfBirth,
-      age,
       gender,
       height,
       weight,
@@ -103,13 +102,13 @@ export function createAuthRouter({ dbGet, dbInsert, jwtSecret }) {
     const hashedPassword = await hashPassword(password);
 
     const result = await dbInsert(
-      `INSERT INTO users (name, email, password, phone, id_card, date_of_birth, age, gender, height, weight, medical_conditions, allergies, role)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'patient')`,
-      [name, email, hashedPassword, phone || null, idCard, dateOfBirth, age, gender, height, weight, medicalConditions, allergies]
+      `INSERT INTO users (name, email, password, phone, id_card, date_of_birth, gender, height, weight, medical_conditions, allergies, role)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'patient')`,
+      [name, email, hashedPassword, phone || null, idCard, dateOfBirth, gender, height, weight, medicalConditions, allergies]
     );
 
     return dbGet(
-      'SELECT id, name, email, phone, role, id_card, date_of_birth, age, gender, height, weight, medical_conditions, allergies FROM users WHERE id = ?',
+      'SELECT id, name, email, phone, role, id_card, date_of_birth, gender, height, weight, medical_conditions, allergies FROM users WHERE id = ?',
       [result.lastID]
     );
   };
@@ -150,7 +149,7 @@ export function createAuthRouter({ dbGet, dbInsert, jwtSecret }) {
   router.get('/profile', createAuthenticateToken(jwtSecret), async (req, res) => {
     try {
       const user = await dbGet(
-        'SELECT id, name, email, phone, role, id_card, date_of_birth, age, gender, height, weight, medical_conditions, allergies FROM users WHERE id = ?',
+        'SELECT id, name, email, phone, role, id_card, date_of_birth, gender, height, weight, medical_conditions, allergies FROM users WHERE id = ?',
         [req.user.id]
       );
       if (!user) {
@@ -177,7 +176,7 @@ export function createUserRouter({ dbGet, dbAll, dbRun, jwtSecret }) {
 
   const getUserById = async (id) => {
     return dbGet(
-      'SELECT id, name, email, phone, role, id_card, date_of_birth, age, gender, height, weight, medical_conditions, allergies FROM users WHERE id = ?',
+      'SELECT id, name, email, phone, role, id_card, date_of_birth, gender, height, weight, medical_conditions, allergies FROM users WHERE id = ?',
       [id]
     );
   };
@@ -213,7 +212,6 @@ export function createUserRouter({ dbGet, dbAll, dbRun, jwtSecret }) {
            phone = ?,
            id_card = ?,
            date_of_birth = ?,
-           age = ?,
            gender = ?,
            height = ?,
            weight = ?,
@@ -226,7 +224,6 @@ export function createUserRouter({ dbGet, dbAll, dbRun, jwtSecret }) {
         toNullableString(payload.phone, existing.phone),
         toNullableString(payload.idCard, existing.id_card),
         toNullableString(payload.dateOfBirth, existing.date_of_birth),
-        toNullableNumber(payload.age, existing.age),
         toNullableString(payload.gender, existing.gender),
         toNullableNumber(payload.height, existing.height),
         toNullableNumber(payload.weight, existing.weight),
@@ -286,7 +283,7 @@ export function createUserRouter({ dbGet, dbAll, dbRun, jwtSecret }) {
 
       const escapedTerm = rawCondition.replace(/[%_]/g, '\\$&');
       const users = await dbAll(
-        `SELECT id, name, email, phone, role, id_card, date_of_birth, age, gender, height, weight, medical_conditions, allergies
+        `SELECT id, name, email, phone, role, id_card, date_of_birth, gender, height, weight, medical_conditions, allergies
          FROM users
          WHERE role = 'patient'
            AND medical_conditions IS NOT NULL

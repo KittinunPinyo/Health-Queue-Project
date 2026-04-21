@@ -15,7 +15,6 @@ import Chat from './chat/chat.jsx';
 import HomeAdmin from './pages_admin/HomeAdmin.jsx';
 import Clinics from './pages_admin/Clinics.jsx';
 import Appointments from './pages_admin/Appointments.jsx';
-import ProfileAdmin from './pages_admin/Profileadmin.jsx';
 import AdminChat from './chat/adminchat.jsx';
 import AppointmentHistory from './pages_admin/AppointmentHistory.jsx';
 
@@ -46,7 +45,6 @@ export default function AppRoutes() {
           <Route path="history" element={<AppointmentHistory />} />
           <Route path="clinics" element={<Clinics />} />
           <Route path="appointments" element={<Appointments />} /> 
-          <Route path="profile" element={<ProfileAdmin />} />
           <Route path="chat" element={<AdminChat />} />
         </Route>
       </Route>

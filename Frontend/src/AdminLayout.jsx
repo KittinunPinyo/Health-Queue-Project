@@ -8,7 +8,6 @@ const getAdminHeaderProps = (pathname) => {
     if (pathname.includes('/admin/clinics')) return { title: 'จัดการโรงพยาบาล/คลินิก/แพทย์', subtitle: 'เพิ่ม แก้ไข และดูรายละเอียดคลินิกและแพทย์ทั้งหมด' };
     if (pathname.includes('/admin/appointments')) return { title: 'จัดการคนไข้', subtitle: 'ค้นหาและแก้ไขข้อมูลคนไข้ได้อย่างปลอดภัย' };
     if (pathname.includes('/admin/chat')) return { title: 'แชทกับคนไข้', subtitle: 'ติดต่อคนไข้ได้ทันที พร้อมประวัติการสนทนา' };
-    if (pathname.includes('/admin/profile')) return { title: 'ตั้งค่า', subtitle: 'ปรับค่าบัญชีแอดมินและจัดการเซสชันของคุณ' };
     return { title: 'Admin Dashboard', subtitle: 'ศูนย์กลางการจัดการระบบของคุณ' };
 };
 

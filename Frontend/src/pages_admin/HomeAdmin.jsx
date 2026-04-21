@@ -848,8 +848,10 @@ function HomeAdmin() {
                                                     style={{ 
                                                         width: '100%', fontSize: '0.95rem', padding: '1rem',
                                                         border: '2px solid #e2e8f0', borderRadius: '12px',
-                                                        resize: 'vertical', outline: 'none',
+                                                        minHeight: '96px', resize: 'vertical', outline: 'none',
                                                         transition: 'border-color 0.2s',
+                                                        lineHeight: 1.5,
+                                                        boxSizing: 'border-box',
                                                         fontFamily: 'inherit'
                                                     }}
                                                     onFocus={(e) => e.target.style.borderColor = '#ec4899'}
@@ -870,13 +872,17 @@ function HomeAdmin() {
                                                 </label>
                                                 <textarea
                                                     placeholder="เขียนข้อความเตือน/เหตุผลที่ปฏิเสธคำขอ..."
-                                                    rows="2"
+                                                    rows="3"
                                                     value={rejectionMessages[r.id] || ''}
                                                     onChange={(e) => handleRejectionMessageChange(r.id, e.target.value)}
                                                     style={{
-                                                        width: '100%', fontSize: '0.95rem', padding: '0.75rem',
-                                                        border: '1px solid #e2e8f0', borderRadius: '10px',
-                                                        resize: 'vertical', outline: 'none', fontFamily: 'inherit'
+                                                        width: '100%', fontSize: '0.95rem', padding: '1rem',
+                                                        border: '2px solid #e2e8f0', borderRadius: '12px',
+                                                        minHeight: '96px', resize: 'vertical', outline: 'none',
+                                                        lineHeight: 1.5,
+                                                        boxSizing: 'border-box',
+                                                        transition: 'border-color 0.2s',
+                                                        fontFamily: 'inherit'
                                                     }}
                                                     onFocus={(e) => e.target.style.borderColor = '#ef4444'}
                                                     onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}

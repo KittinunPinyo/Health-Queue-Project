@@ -136,13 +136,14 @@ function AppointmentHistory() {
         if (searchTerm) {
             const term = searchTerm.toLowerCase();
             const termDigits = searchTerm.replace(/\D/g, '');
+            const isPhoneLikeSearch = /^\d{9,10}$/.test(termDigits);
             result = result.filter(apt => 
                 apt.patientName?.toLowerCase().includes(term) ||
                 apt.doctorName?.toLowerCase().includes(term) ||
                 apt.clinicName?.toLowerCase().includes(term) ||
                 apt.specialty?.toLowerCase().includes(term) ||
-                apt.id?.toString().toLowerCase().includes(term) ||
-                (termDigits && apt.id?.toString().replace(/\D/g, '').includes(termDigits)) // ค้นหาด้วยรหัสนัดหมาย
+                (!isPhoneLikeSearch && apt.id?.toString().toLowerCase().includes(term)) ||
+                (!isPhoneLikeSearch && termDigits && apt.id?.toString().replace(/\D/g, '').includes(termDigits)) // ค้นหาด้วยรหัสนัดหมาย
             );
         }
 
@@ -712,8 +713,8 @@ function AppointmentHistory() {
                                                 })()}
                                             </span>
                                         </td>
-                                        <td style={{ padding: '18px 20px', textAlign: 'center' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
+                                        <td style={{ padding: '18px 20px', textAlign: 'left' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '12px' }}>
                                                 <div style={{
                                                     width: '44px',
                                                     height: '44px',
